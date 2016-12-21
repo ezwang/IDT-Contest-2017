@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -100,7 +101,7 @@ public class Tester {
 		this.jacocoAgentJarPath = initJacocoAgentJarPath;
 		
 		File jarFileToTest = new File(this.jarToTestPath);
-		this.jacocoOutputFilePath = this.jacocoOutputDirPath+"\\"+jarFileToTest.getName().replaceAll("\\.", "_")+JACOCO_OUTPUT_FILE_SUFFIX;
+		this.jacocoOutputFilePath = Paths.get(this.jacocoOutputDirPath, jarFileToTest.getName().replaceAll("\\.", "_"), JACOCO_OUTPUT_FILE_SUFFIX).toString();
 		
 		File jacocoOutputFile = new File(this.jacocoOutputFilePath);
 		if (jacocoOutputFile !=null && jacocoOutputFile.exists()) {
