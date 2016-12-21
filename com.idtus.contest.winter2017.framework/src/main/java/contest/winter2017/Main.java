@@ -1,5 +1,7 @@
 package contest.winter2017;
 
+import java.io.File;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -63,10 +65,16 @@ public class Main {
 			if (cliArgs != null){
 				
 				// if we have the three arguments we need for exploratory black-box testing, initialize and execute the tester.  
-				if (cliArgs.hasOption(JAR_TO_TEST_PATH) && cliArgs.hasOption(JACOCO_OUTPUT_PATH) && cliArgs.hasOption(JACOCO_AGENT_JAR_PATH)) {
+				if (cliArgs.hasOption(JAR_TO_TEST_PATH) && cliArgs.hasOption(JACOCO_AGENT_JAR_PATH)) {
 					
 					String jarToTestPath = cliArgs.getOptionValue(JAR_TO_TEST_PATH);
-					String jacocoOutputDirPath = cliArgs.getOptionValue(JACOCO_OUTPUT_PATH);
+					String jacocoOutputDirPath;
+					if (cliArgs.hasOption(JACOCO_OUTPUT_PATH)) {
+						jacocoOutputDirPath = cliArgs.getOptionValue(JACOCO_OUTPUT_PATH);
+					}
+					else {
+						jacocoOutputDirPath = createTempDir().getAbsolutePath();
+					}
 					String jacocoAgentJarPath = cliArgs.getOptionValue(JACOCO_AGENT_JAR_PATH);
 					
 					// the Tester class contains all of the logic for the testing framework
@@ -95,6 +103,17 @@ public class Main {
 		}
 	}
 	
+	private static File createTempDir() {
+		File baseDir = new File(System.getProperty("java.io.tmpdir"));
+		String baseName = "jacocoOutput-" + System.currentTimeMillis() + "-";
+		for (int x = 0; x < 10; x++) {
+			File tempDir = new File(baseDir, baseName + x);
+			if (tempDir.mkdir()) {
+				return tempDir;
+			}
+		}
+		throw new IllegalStateException("Failed to create temporary directory in " + baseDir.getAbsolutePath() + "!");
+	}
 	
 	/**
 	 * private static method used to print the application help
