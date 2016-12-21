@@ -92,7 +92,7 @@ public class Main {
 			    // user did not request help and we had an inadequate number of arguments
 				} else {
 					
-					System.out.println("Failed to execute - application requires at least three parameters.");
+					System.out.println("Failed to execute - application requires at least two parameters.");
 					printHelp(options);
 					
 				}
