@@ -1,6 +1,9 @@
 package contest.winter2017;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -65,7 +68,7 @@ public class Main {
 			if (cliArgs != null){
 				
 				// if we have the three arguments we need for exploratory black-box testing, initialize and execute the tester.  
-				if (cliArgs.hasOption(JAR_TO_TEST_PATH) && cliArgs.hasOption(JACOCO_AGENT_JAR_PATH)) {
+				if (cliArgs.hasOption(JAR_TO_TEST_PATH)) {
 					
 					String jarToTestPath = cliArgs.getOptionValue(JAR_TO_TEST_PATH);
 					String jacocoOutputDirPath;
@@ -75,7 +78,35 @@ public class Main {
 					else {
 						jacocoOutputDirPath = createTempDir().getAbsolutePath();
 					}
-					String jacocoAgentJarPath = cliArgs.getOptionValue(JACOCO_AGENT_JAR_PATH);
+					String jacocoAgentJarPath = null;
+					if (cliArgs.hasOption(JACOCO_AGENT_JAR_PATH)) {
+						jacocoAgentJarPath = cliArgs.getOptionValue(JACOCO_AGENT_JAR_PATH);
+					}
+					else {
+						try {
+							File tempFile = File.createTempFile("jacocoJar", "agent.jar");
+							tempFile.deleteOnExit();
+							
+							InputStream fileStream = Main.class.getResourceAsStream("agent.jar");
+							
+							OutputStream out = new FileOutputStream(tempFile);
+							byte[] buffer = new byte[1024];
+							int len = fileStream.read(buffer);
+							while (len != -1) {
+								out.write(buffer, 0, len);
+								len = fileStream.read(buffer);
+							}
+							fileStream.close();
+							out.close();
+							jacocoAgentJarPath = tempFile.getAbsolutePath();
+						}
+						catch (Exception ex) {
+							System.err.println("Error: Unable to extract Jacoco Agent jar!");
+							System.err.println("You can use the -" + JACOCO_OUTPUT_PATH + " option to specify the agent file.");
+							ex.printStackTrace();
+							System.exit(0);
+						}
+					}
 					
 					// the Tester class contains all of the logic for the testing framework
 					Tester tester = new Tester();
