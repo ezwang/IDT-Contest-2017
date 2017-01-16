@@ -19,6 +19,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.Attributes;
@@ -102,7 +103,7 @@ public class Tester {
 	
 	private int yaml_test_pass = 0;
 	private int yaml_test_fail = 0;
-	private ArrayList<String> yaml_errors = new ArrayList<String>();
+	private HashSet<String> yaml_errors = new HashSet<String>();
 	
 	
 	//////////////////////////////////////////
@@ -382,6 +383,11 @@ public class Tester {
 		// and how to access (print to screen) the standard output and error from the run
 		Output output = instrumentAndExecuteCode(parameters);
 		printBasicTestOutput(output); 
+		
+		if (!output.getStdErrString().isEmpty()) {
+			String err = output.getStdErrString().trim();
+			this.yaml_errors.add(err);
+		}
 		
 		// We do not intend for this example code to be part of your output. We are only
 		// including the example to show you how you might tap into the code coverage
