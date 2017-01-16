@@ -31,8 +31,7 @@ import java.util.Map;
  */
 public class ParameterFactory {
 
-	@SuppressWarnings("rawtypes")
-	private Map inputMap;
+	public Map<String, Object> inputMap;
 	private Map<String, Object> dependentParametersMap;
 	private boolean bounded;
 
@@ -41,15 +40,15 @@ public class ParameterFactory {
 	 * ctr for Parameter Factory class
 	 * @param inputMap - input map that describes all of the parameter data associated with an executable jar
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public ParameterFactory(Map inputMap) {
+	@SuppressWarnings({ "unchecked" })
+	public ParameterFactory(Map<String, Object> inputMap) {
 		this.inputMap = inputMap;
 		if (this.inputMap.get("fixed parameter list") != null) {
 			this.bounded = true;
 		} else {
 			this.bounded = false;
 		}
-		this.dependentParametersMap = (Map) this.inputMap.get("dependent parameters");
+		this.dependentParametersMap = (Map<String, Object>) this.inputMap.get("dependent parameters");
 	}
 
 	

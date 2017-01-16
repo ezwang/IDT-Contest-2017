@@ -3,17 +3,22 @@ package contest.winter2017;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.Attributes;
@@ -28,6 +33,22 @@ import org.jacoco.core.data.IExecutionDataVisitor;
 import org.jacoco.core.data.ISessionInfoVisitor;
 import org.jacoco.core.data.SessionInfo;
 import org.jacoco.core.tools.ExecFileLoader;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
+import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAdapterFactory;
+import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 
 /**
  * Class that will handle execution of basic tests and exploratory security test on a black-box executable jar.  
@@ -91,11 +112,11 @@ public class Tester {
 	 * @param initJarToTestPath - String representing path of the jar to test
 	 * @param initJacocoOutputDirPath - String representing path of the directory jacoco will use for output
 	 * @param initJacocoAgentJarPath - String representing path of the jacoco agent jar
+	 * @param testFile - String representing path of file to save the JSON tests
 	 * @return boolean - false if initialization encounters an Exception, true if it does not
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public boolean init(String initJarToTestPath, String initJacocoOutputDirPath, String initJacocoAgentJarPath) {
-		
+	public boolean init(String initJarToTestPath, String initJacocoOutputDirPath, String initJacocoAgentJarPath, String testFile) {
 		this.jarToTestPath = initJarToTestPath;
 		this.jacocoOutputDirPath = initJacocoOutputDirPath;
 		this.jacocoAgentJarPath = initJacocoAgentJarPath;
@@ -111,59 +132,71 @@ public class Tester {
 		URL fileURL = null;
 	    URL jarURL = null;
 		try {
-			
-			// load up the jar under test so that we can access information about the class from 'TestBounds'
-			fileURL = jarFileToTest.toURI().toURL();
-			String jarUrlTemp = "jar:"+jarFileToTest.toURI().toString()+"!/";
-			jarURL = new URL(jarUrlTemp);
-			URLClassLoader cl = URLClassLoader.newInstance(new URL[]{fileURL});
-			JarURLConnection jarURLconn = null;
-			jarURLconn = (JarURLConnection)jarURL.openConnection();
+			Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().registerTypeAdapter(java.lang.Class.class, new JsonSerializer() {
 
-			// figuring out where the entry-point (main class) is in the jar under test
-			Attributes attr = null;
-			attr = jarURLconn.getMainAttributes();
-			String mainClassName = attr.getValue(Attributes.Name.MAIN_CLASS);
+				@Override
+				public JsonElement serialize(Object src, Type typeOfSrc, JsonSerializationContext context) {
+					return new JsonPrimitive(src.toString());
+				}
+				
+			}).create();
 			
-			// loading the TestBounds class from the jar under test
-			String mainClassTestBoundsName = mainClassName+"TestBounds";
-			Class<?> mainClassTestBounds = null;
-			try {
-				mainClassTestBounds = cl.loadClass(mainClassTestBoundsName);
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
+			if (new File(testFile).exists()) {
+				// test cases are already converted to json, load them
+				this.parameterFactory = gson.fromJson(new String(Files.readAllBytes(Paths.get(testFile))), ParameterFactory.class);
 			}
+			else {
+				// load up the jar under test so that we can access information about the class from 'TestBounds'
+				fileURL = jarFileToTest.toURI().toURL();
+				String jarUrlTemp = "jar:"+jarFileToTest.toURI().toString()+"!/";
+				jarURL = new URL(jarUrlTemp);
+				URLClassLoader cl = URLClassLoader.newInstance(new URL[]{fileURL});
+				JarURLConnection jarURLconn = null;
+				jarURLconn = (JarURLConnection)jarURL.openConnection();
+	
+				// figuring out where the entry-point (main class) is in the jar under test
+				Attributes attr = null;
+				attr = jarURLconn.getMainAttributes();
+				String mainClassName = attr.getValue(Attributes.Name.MAIN_CLASS);
+				
+				// loading the TestBounds class from the jar under test
+				String mainClassTestBoundsName = mainClassName+"TestBounds";
+				Class<?> mainClassTestBounds = null;
+				try {
+					mainClassTestBounds = cl.loadClass(mainClassTestBoundsName);
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				}
+	
+				// use reflection to invoke the TestBounds class to get the usage information from the jar
+				Method testBoundsMethod = null;
+				testBoundsMethod = mainClassTestBounds.getMethod("testBounds");
+				
+				Object mainClassTestBoundsInstance = null;
+				mainClassTestBoundsInstance = mainClassTestBounds.newInstance();
 
-			// use reflection to invoke the TestBounds class to get the usage information from the jar
-			Method testBoundsMethod = null;
-			testBoundsMethod = mainClassTestBounds.getMethod("testBounds");
-			
-			Object mainClassTestBoundsInstance = null;
-			mainClassTestBoundsInstance = mainClassTestBounds.newInstance();
-
-			Map<String, Object> mainClassTestBoundsMap = null;
-			mainClassTestBoundsMap =
-					(Map<String, Object>)testBoundsMethod.invoke(mainClassTestBoundsInstance);
-
-			// instantiating a new Parameter Factory using the Test Bounds map
-			this.parameterFactory = new ParameterFactory(mainClassTestBoundsMap);
+				Map<String, Object> mainClassTestBoundsMap =
+						(Map<String, Object>)testBoundsMethod.invoke(mainClassTestBoundsInstance);
+				
+				// instantiating a new Parameter Factory using the Test Bounds map
+				this.parameterFactory = new ParameterFactory(mainClassTestBoundsMap);
+				
+				Files.write(Paths.get(testFile), gson.toJson(this.parameterFactory).getBytes());
+			}
 			
 			// get a list of basic tests from the TestBounds class
 			this.tests = new ArrayList<Test>();
-			List testList = (List)mainClassTestBoundsMap.get("tests");
+			List testList = (List)this.parameterFactory.inputMap.get("tests");
 			for(Object inTest : testList) {
 				this.tests.add(new Test((Map)inTest));
 			}
 
-		} catch (IOException|IllegalAccessException | IllegalArgumentException | InvocationTargetException | 
-				InstantiationException | NoSuchMethodException | SecurityException | NullPointerException e) {
-			// if we have an exception during initialization, display the error to the user and return a false status
+		} catch (Exception e) {
 			System.out.println("ERROR: An exception occurred during initialization.");
 			e.printStackTrace();
 			return false;
 		} 
 		
-		// if we did not encounter an exception during initialization, return a true status
 		return true;
 	}
 	

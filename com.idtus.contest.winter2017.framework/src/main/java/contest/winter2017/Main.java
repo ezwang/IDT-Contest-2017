@@ -63,14 +63,19 @@ public class Main {
 		options.addOption(HELP, false, "help");
 		options.addOption(ALT_HELP, false, "help");
 		
+		options.getOption(JAR_TO_TEST_PATH).setRequired(true);
+		options.getOption(JACOCO_OUTPUT_PATH).setRequired(false);
+		options.getOption(JACOCO_AGENT_JAR_PATH).setRequired(false);
+		
 		try {
 			CommandLine cliArgs = parser.parse(options, args);
 			if (cliArgs != null){
-				
-				// if we have the three arguments we need for exploratory black-box testing, initialize and execute the tester.  
 				if (cliArgs.hasOption(JAR_TO_TEST_PATH)) {
 					
 					String jarToTestPath = cliArgs.getOptionValue(JAR_TO_TEST_PATH);
+					File jarToTestFile = new File(jarToTestPath);
+					File testFile = new File(jarToTestFile.getParent(), jarToTestFile.getName().replaceFirst("[.][^.]+$", "") + ".json");
+					
 					String jacocoOutputDirPath;
 					if (cliArgs.hasOption(JACOCO_OUTPUT_PATH)) {
 						jacocoOutputDirPath = cliArgs.getOptionValue(JACOCO_OUTPUT_PATH);
@@ -108,11 +113,11 @@ public class Main {
 						}
 					}
 					
-					// the Tester class contains all of the logic for the testing framework
+
 					Tester tester = new Tester();
-					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath)) {
-						tester.executeBasicTests();          // this is the simple testing that we have implemented - likely no need to change this code much
-						tester.executeSecurityTests();       // this is the security vulnerability testing that we want you to implement
+					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath())) {
+						tester.executeBasicTests();
+						tester.executeSecurityTests();
 					}
 					
 				// if the user has requested help
