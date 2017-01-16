@@ -213,17 +213,22 @@ public class Tester {
 		System.out.println("Number of predefined tests that failed: " + this.yaml_test_fail);
 		System.out.println("Total code coverage percentage: " + this.generateSummaryCodeCoverageResults());
 		System.out.println("Unique error count: " + this.yaml_errors.size());
-		System.out.println("Errors seen:");
-		for (String s : this.yaml_errors) {
-			if (s.trim().contains("\n")) {
-				System.out.println("  - |-");
-				for (String line : s.trim().split("\n")) {
-					System.out.println("  - " + line);
+		if (this.yaml_errors.size() > 0) {
+			System.out.println("Errors seen:");
+			for (String s : this.yaml_errors) {
+				if (s.trim().contains("\n")) {
+					System.out.println("  - |-");
+					for (String line : s.trim().split("\n")) {
+						System.out.println("  - " + line);
+					}
+				}
+				else {
+					System.out.println("  - " + s.trim());
 				}
 			}
-			else {
-				System.out.println("  - " + s.trim());
-			}
+		}
+		else {
+			System.out.println("Errors seen: []");
 		}
 	}
 	
