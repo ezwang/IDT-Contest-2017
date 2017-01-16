@@ -216,7 +216,7 @@ public class Tester {
 		System.out.println("Errors seen:");
 		for (String s : this.yaml_errors) {
 			if (s.trim().contains("\n")) {
-				System.out.println("  - |");
+				System.out.println("  - |-");
 				for (String line : s.trim().split("\n")) {
 					System.out.println("  - " + line);
 				}
