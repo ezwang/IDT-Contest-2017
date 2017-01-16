@@ -50,7 +50,22 @@ public class Main {
 	/**
 	 * option to enable/disable converting tests to json
 	 */
-	public static final String OPT_NO_CONVERT_TO_JSON = "nojson";
+	public static final String NO_CONVERT_TO_JSON = "noJson";
+	
+	/**
+	 * number of exploratory black box tests to run
+	 */
+	public static final String TEST_ITERATIONS = "bbTests";
+	
+	/**
+	 * test time goal
+	 */
+	public static final String TEST_TIME = "timeGoal";
+	
+	/**
+	 * only output YAML
+	 */
+	public static final String ONLY_YAML = "toolChain";
 	
 	/**
 	 * Entry-point method for the black-box testing framework 
@@ -65,14 +80,20 @@ public class Main {
 		options.addOption(JAR_TO_TEST_PATH, true, "path to the executable jar to test");
 		options.addOption(JACOCO_OUTPUT_PATH, true, "path to directory for jacoco output");
 		options.addOption(JACOCO_AGENT_JAR_PATH, true, "path to the jacoco agent jar");
-		options.addOption(OPT_NO_CONVERT_TO_JSON, false, "disable converting test cases to json");
+		options.addOption(NO_CONVERT_TO_JSON, false, "disable converting test cases to json");
+		options.addOption(TEST_ITERATIONS, true, "number of exploratory black box tests to run");
+		options.addOption(TEST_TIME, true, "maximum time limit for exploratory black box tests to run");
+		options.addOption(ONLY_YAML, false, "only output YAML summary");
 		options.addOption(HELP, false, "help");
 		options.addOption(ALT_HELP, false, "help");
 		
 		options.getOption(JAR_TO_TEST_PATH).setRequired(true);
 		options.getOption(JACOCO_OUTPUT_PATH).setRequired(false);
 		options.getOption(JACOCO_AGENT_JAR_PATH).setRequired(false);
-		options.getOption(OPT_NO_CONVERT_TO_JSON).setRequired(false);
+		options.getOption(NO_CONVERT_TO_JSON).setRequired(false);
+		options.getOption(TEST_TIME).setRequired(false);
+		options.getOption(TEST_ITERATIONS).setRequired(false);
+		options.getOption(ONLY_YAML).setRequired(false);
 		
 		try {
 			CommandLine cliArgs = parser.parse(options, args);
@@ -122,7 +143,7 @@ public class Main {
 					
 
 					Tester tester = new Tester();
-					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath(), cliArgs.hasOption(OPT_NO_CONVERT_TO_JSON))) {
+					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath(), cliArgs.hasOption(NO_CONVERT_TO_JSON))) {
 						tester.executeBasicTests();
 						tester.executeSecurityTests();
 					}
