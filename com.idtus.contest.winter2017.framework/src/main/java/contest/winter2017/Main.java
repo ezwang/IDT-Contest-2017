@@ -48,6 +48,11 @@ public class Main {
 	public static final String ALT_HELP = "h";
 	
 	/**
+	 * option to enable/disable converting tests to json
+	 */
+	public static final String OPT_NO_CONVERT_TO_JSON = "nojson";
+	
+	/**
 	 * Entry-point method for the black-box testing framework 
 	 * 
 	 * @param args - String array of command line arguments
@@ -60,12 +65,14 @@ public class Main {
 		options.addOption(JAR_TO_TEST_PATH, true, "path to the executable jar to test");
 		options.addOption(JACOCO_OUTPUT_PATH, true, "path to directory for jacoco output");
 		options.addOption(JACOCO_AGENT_JAR_PATH, true, "path to the jacoco agent jar");
+		options.addOption(OPT_NO_CONVERT_TO_JSON, false, "disable converting test cases to json");
 		options.addOption(HELP, false, "help");
 		options.addOption(ALT_HELP, false, "help");
 		
 		options.getOption(JAR_TO_TEST_PATH).setRequired(true);
 		options.getOption(JACOCO_OUTPUT_PATH).setRequired(false);
 		options.getOption(JACOCO_AGENT_JAR_PATH).setRequired(false);
+		options.getOption(OPT_NO_CONVERT_TO_JSON).setRequired(false);
 		
 		try {
 			CommandLine cliArgs = parser.parse(options, args);
@@ -115,7 +122,7 @@ public class Main {
 					
 
 					Tester tester = new Tester();
-					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath())) {
+					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath(), cliArgs.hasOption(OPT_NO_CONVERT_TO_JSON))) {
 						tester.executeBasicTests();
 						tester.executeSecurityTests();
 					}

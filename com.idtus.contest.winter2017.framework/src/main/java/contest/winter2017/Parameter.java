@@ -41,7 +41,17 @@ public class Parameter {
 	 */
 	@SuppressWarnings("rawtypes")
 	public Class getType() {
-		return (Class) this.inputMap.get("type");
+		Object type = this.inputMap.get("type");
+		if (type instanceof String) {
+			try {
+				return Class.forName(type.toString());
+			} catch (ClassNotFoundException e) {
+				return null;
+			}
+		}
+		else {
+			return (Class) type;
+		}
 	}
 
 	/**

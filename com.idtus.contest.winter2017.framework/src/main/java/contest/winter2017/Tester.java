@@ -113,10 +113,11 @@ public class Tester {
 	 * @param initJacocoOutputDirPath - String representing path of the directory jacoco will use for output
 	 * @param initJacocoAgentJarPath - String representing path of the jacoco agent jar
 	 * @param testFile - String representing path of file to save the JSON tests
+	 * @param disableJsonConversion - Disable json conversion and use test cases in jar
 	 * @return boolean - false if initialization encounters an Exception, true if it does not
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public boolean init(String initJarToTestPath, String initJacocoOutputDirPath, String initJacocoAgentJarPath, String testFile) {
+	public boolean init(String initJarToTestPath, String initJacocoOutputDirPath, String initJacocoAgentJarPath, String testFile, Boolean disableJsonConversion) {
 		this.jarToTestPath = initJarToTestPath;
 		this.jacocoOutputDirPath = initJacocoOutputDirPath;
 		this.jacocoAgentJarPath = initJacocoAgentJarPath;
@@ -136,12 +137,12 @@ public class Tester {
 
 				@Override
 				public JsonElement serialize(Object src, Type typeOfSrc, JsonSerializationContext context) {
-					return new JsonPrimitive(src.toString());
+					return new JsonPrimitive(((Class)src).getName());
 				}
 				
 			}).create();
 			
-			if (new File(testFile).exists()) {
+			if (new File(testFile).exists() && !disableJsonConversion) {
 				// test cases are already converted to json, load them
 				this.parameterFactory = gson.fromJson(new String(Files.readAllBytes(Paths.get(testFile))), ParameterFactory.class);
 			}
@@ -181,7 +182,9 @@ public class Tester {
 				// instantiating a new Parameter Factory using the Test Bounds map
 				this.parameterFactory = new ParameterFactory(mainClassTestBoundsMap);
 				
-				Files.write(Paths.get(testFile), gson.toJson(this.parameterFactory).getBytes());
+				if (!disableJsonConversion) {
+					Files.write(Paths.get(testFile), gson.toJson(this.parameterFactory).getBytes());
+				}
 			}
 			
 			// get a list of basic tests from the TestBounds class

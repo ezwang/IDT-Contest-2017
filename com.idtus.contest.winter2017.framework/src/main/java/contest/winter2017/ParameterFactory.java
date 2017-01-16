@@ -32,7 +32,6 @@ import java.util.Map;
 public class ParameterFactory {
 
 	public Map<String, Object> inputMap;
-	private Map<String, Object> dependentParametersMap;
 	private boolean bounded;
 
 	
@@ -48,7 +47,6 @@ public class ParameterFactory {
 		} else {
 			this.bounded = false;
 		}
-		this.dependentParametersMap = (Map<String, Object>) this.inputMap.get("dependent parameters");
 	}
 
 	
@@ -86,9 +84,10 @@ public class ParameterFactory {
 		String currentParamsString = sb.toString();
 
 		// process all dependent parameters
-		if (this.dependentParametersMap != null) {
+		Map<String, Object> dependentParametersMap = (Map<String, Object>)this.inputMap.get("dependent parameters");
+		if (dependentParametersMap != null) {
 
-			for (Map.Entry<String, Object> mapEntry : this.dependentParametersMap.entrySet()) {
+			for (Map.Entry<String, Object> mapEntry : dependentParametersMap.entrySet()) {
 
 				if (currentParamsString.matches(mapEntry.getKey())|| (mapEntry.getKey().isEmpty() && currentParamsString.isEmpty())) {
 					Object obj = mapEntry.getValue();
