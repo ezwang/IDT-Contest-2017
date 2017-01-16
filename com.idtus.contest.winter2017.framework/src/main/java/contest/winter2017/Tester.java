@@ -100,6 +100,10 @@ public class Tester {
 	 */
 	private ParameterFactory parameterFactory = null;
 	
+	private int yaml_test_pass = 0;
+	private int yaml_test_fail = 0;
+	private ArrayList<String> yaml_errors = new ArrayList<String>();
+	
 	
 	//////////////////////////////////////////
 	// PUBLIC METHODS
@@ -203,6 +207,25 @@ public class Tester {
 		return true;
 	}
 	
+	public void printYaml() {
+		System.out.println("Total predefined tests run: " + (this.yaml_test_pass + this.yaml_test_fail));
+		System.out.println("Number of predefined tests that passed: " + this.yaml_test_pass);
+		System.out.println("Number of predefined tests that failed: " + this.yaml_test_fail);
+		System.out.println("Total code coverage percentage: " + this.generateSummaryCodeCoverageResults());
+		System.out.println("Unique error count: " + this.yaml_errors.size());
+		System.out.println("Errors seen:");
+		for (String s : this.yaml_errors) {
+			if (s.trim().contains("\n")) {
+				System.out.println("  - |");
+				for (String line : s.trim().split("\n")) {
+					System.out.println("  - " + line);
+				}
+			}
+			else {
+				System.out.println("  - " + s.trim());
+			}
+		}
+	}
 	
 	/**
 	 * This is the half of the framework that IDT has completed. We are able to pull basic tests 
@@ -252,6 +275,9 @@ public class Tester {
 		double percentCovered = generateSummaryCodeCoverageResults();
 		System.out.println("basic test results: " + (passCount + failCount) + " total, " + passCount + " pass, " + failCount + " fail, " + percentCovered + " percent covered");
 		System.out.println(HORIZONTAL_LINE);
+		
+		this.yaml_test_pass = passCount;
+		this.yaml_test_fail = failCount;
 	}
 	
 	

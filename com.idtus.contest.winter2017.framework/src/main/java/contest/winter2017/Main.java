@@ -84,8 +84,8 @@ public class Main {
 		options.addOption(TEST_ITERATIONS, true, "number of exploratory black box tests to run");
 		options.addOption(TEST_TIME, true, "maximum time limit for exploratory black box tests to run");
 		options.addOption(ONLY_YAML, false, "only output YAML summary");
-		options.addOption(HELP, false, "help");
-		options.addOption(ALT_HELP, false, "help");
+		options.addOption(HELP, false, "display this help message");
+		options.addOption(ALT_HELP, false, "display this help message");
 		
 		options.getOption(JAR_TO_TEST_PATH).setRequired(true);
 		options.getOption(JACOCO_OUTPUT_PATH).setRequired(false);
@@ -146,6 +146,7 @@ public class Main {
 					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath(), cliArgs.hasOption(NO_CONVERT_TO_JSON))) {
 						tester.executeBasicTests();
 						tester.executeSecurityTests();
+						tester.printYaml();
 					}
 					
 				// if the user has requested help
@@ -155,10 +156,8 @@ public class Main {
 					
 			    // user did not request help and we had an inadequate number of arguments
 				} else {
-					
-					System.out.println("Failed to execute - application requires at least two parameters.");
+					System.out.println("Failed to execute - the -" + JAR_TO_TEST_PATH + " argument is required.");
 					printHelp(options);
-					
 				}
 			}
 		
@@ -184,7 +183,7 @@ public class Main {
 	 */
 	private static void printHelp(Options options) {
 		 String header = "\n";
-		 String footer = "\nFor additional information about the testing framework, please see the documentation provided by IDT.";
+		 String footer = "\nFor additional information about the testing framework, please see the documentation provided with this application.";
 		 
 		 HelpFormatter formatter = new HelpFormatter();
 		 formatter.printHelp("com.idtus.contest.winter2017.framework", header, options, footer, true);
