@@ -240,6 +240,11 @@ public class Tester {
 		}
 	}
 	
+	class BasicTestResult {
+		public boolean passed;
+		public String error;
+	}
+	
 	/**
 	 * This is the half of the framework that IDT has completed. We are able to pull basic tests 
 	 * directly from the executable jar. We are able to run the tests and assess the output as PASS/FAIL.
@@ -256,43 +261,40 @@ public class Tester {
 		
 		ExecutorService executor = Executors.newFixedThreadPool(threads);
 		
-		List<Future<Boolean>> results = new LinkedList<Future<Boolean>>();
+		List<Future<BasicTestResult>> results = new LinkedList<Future<BasicTestResult>>();
 		
 		// iterate through the lists of tests and execute each one
 		for(Test test : this.tests) {
-			Future<Boolean> f = executor.submit(new Callable<Boolean>() {
+			Future<BasicTestResult> f = executor.submit(new Callable<BasicTestResult>() {
 				@Override
-				public Boolean call() {
+				public BasicTestResult call() {
 					// instrument the code to code coverage metrics, execute the test with given parameters, then show the output
 					Output output = instrumentAndExecuteCode(test.getParameters().toArray());
 					printBasicTestOutput(output);
 					
-					boolean passed = false;
+					BasicTestResult result = new BasicTestResult();
+					
+					String pOut = output.getStdOutString();
+					String pErr = output.getStdErrString();
 					
 					// determine the result of the test based on expected output/error regex
-					if(output.getStdOutString().matches(test.getStdOutExpectedResultRegex())
-							&& output.getStdErrString().matches(test.getStdErrExpectedResultRegex())) {
-						System.out.println("basic test result: PASS");
-						passed = true;
+					if(pOut.matches(test.getStdOutExpectedResultRegex())
+							&& pErr.matches(test.getStdErrExpectedResultRegex())) {
+						result.passed = true;
 					}
 					else {
-						System.out.println("basic test result: FAIL ");
-						
+						result.passed = false;
 						// since we have a failed basic test, show the expectation for the stdout
-						if(!output.getStdOutString().matches(test.getStdOutExpectedResultRegex())) {
-							System.out.println("\t ->stdout: "+output.getStdOutString());
-							System.out.println("\t ->did not match expected stdout regex: "+test.getStdOutExpectedResultRegex());
+						if(!pOut.matches(test.getStdOutExpectedResultRegex())) {
+							result.error = "\t ->stdout: "+output.getStdOutString() + "\n" + "\t ->did not match expected stdout regex: " + test.getStdOutExpectedResultRegex();
 						}
 						
 						// since we have a failed basic test, show the expectation for the stderr
-						if(!output.getStdErrString().matches(test.getStdErrExpectedResultRegex())) {
-							System.out.println("\t ->stderr: "+output.getStdErrString());
-							System.out.println("\t ->did not match expected stderr regex: "+test.getStdErrExpectedResultRegex());
-							
+						if(!pErr.matches(test.getStdErrExpectedResultRegex())) {
+							result.error = "\t ->stderr: "+output.getStdErrString() + "\n" + "\t ->did not match expected stderr regex: "+test.getStdErrExpectedResultRegex();
 						}
 					}
-					System.out.println(HORIZONTAL_LINE);
-					return passed;
+					return result;
 				}
 			});
 			results.add(f);
@@ -306,13 +308,18 @@ public class Tester {
 			e.printStackTrace();
 		}
 
-		for (Future<Boolean> r : results) {
+		for (Future<BasicTestResult> r : results) {
 			try {
-				if (r.get()) {
+				if (r.get().passed) {
 					passCount++;
 				}
 				else {
 					failCount++;
+					if (!Main.yamlOnly) {
+						System.out.println("Test Failed!");
+						System.out.println(r.get().error);
+						System.out.println(HORIZONTAL_LINE);
+					}
 				}
 			} catch (InterruptedException | ExecutionException e) {
 				failCount++;
@@ -321,8 +328,11 @@ public class Tester {
 
 		// print the basic test results and the code coverage associated with the basic tests
 		double percentCovered = generateSummaryCodeCoverageResults();
-		System.out.println("basic test results: " + (passCount + failCount) + " total, " + passCount + " pass, " + failCount + " fail, " + percentCovered + " percent covered");
-		System.out.println(HORIZONTAL_LINE);
+		
+		if (!Main.yamlOnly) {
+			System.out.println("basic test results: " + (passCount + failCount) + " total, " + passCount + " pass, " + failCount + " fail, " + percentCovered + " percent covered");
+			System.out.println(HORIZONTAL_LINE);
+		}
 		
 		this.yaml_test_pass = passCount;
 		this.yaml_test_fail = failCount;
@@ -473,7 +483,9 @@ public class Tester {
 			}
 			
 			// show the user the command to run and prepare the process using the command
-			System.out.println("command to run: "+command);
+			if (Main.verbose && !Main.yamlOnly) {
+				System.out.println("command to run: "+command);
+			}
 			process = Runtime.getRuntime().exec(command);
 		
 			// prepare the stream needed to capture standard output
@@ -548,8 +560,10 @@ public class Tester {
 	 * @param output - Output object containing std out/err to print 
 	 */
 	private void printBasicTestOutput(Output output) {
-		System.out.println("stdout of execution: " + output.getStdOutString());
-		System.out.println("stderr of execution: " + output.getStdErrString());
+		if (!Main.yamlOnly && Main.verbose) {
+			System.out.println("stdout of execution: " + output.getStdOutString());
+			System.out.println("stderr of execution: " + output.getStdErrString());
+		}
 	}
 	
 	
@@ -558,6 +572,10 @@ public class Tester {
 	 * @throws IOException
 	 */
 	private void printRawCoverageStats()  {
+		if (Main.yamlOnly) {
+			return;
+		}
+		
 		System.out.printf("exec file: %s%n", this.jacocoOutputFilePath);
 		System.out.println("CLASS ID         HITS/PROBES   CLASS NAME");
 
@@ -742,6 +760,9 @@ public class Tester {
 	 */
 	@Deprecated 
 	private void showCodeCoverageResultsExample() {
+		if (Main.yamlOnly) {
+			return;
+		}
 		
 		// Below is the first example of how to tap into code coverage metrics
 		double result = generateSummaryCodeCoverageResults();

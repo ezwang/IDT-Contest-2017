@@ -66,6 +66,13 @@ public class Main {
 	 * only output YAML
 	 */
 	public static final String ONLY_YAML = "toolChain";
+	public static boolean yamlOnly = false;
+	
+	/**
+	 * output more information
+	 */
+	public static final String ENABLE_VERBOSE = "verbose";
+	public static boolean verbose = false;
 	
 	/**
 	 * number of threads to use for basic tests
@@ -92,6 +99,7 @@ public class Main {
 		options.addOption(ONLY_YAML, false, "only output YAML summary");
 		options.addOption(HELP, false, "display this help message");
 		options.addOption(ALT_HELP, false, "display this help message");
+		options.addOption(ENABLE_VERBOSE, false, "enable output of additional information");
 		
 		options.getOption(JAR_TO_TEST_PATH).setRequired(true);
 		options.getOption(JACOCO_OUTPUT_PATH).setRequired(false);
@@ -101,6 +109,7 @@ public class Main {
 		options.getOption(TEST_ITERATIONS).setRequired(false);
 		options.getOption(ONLY_YAML).setRequired(false);
 		options.getOption(BASIC_TEST_THREADS).setRequired(false);
+		options.getOption(ENABLE_VERBOSE).setRequired(false);;
 		
 		try {
 			CommandLine cliArgs = parser.parse(options, args);
@@ -157,6 +166,8 @@ public class Main {
 							numThreads = 5;
 						}
 					}
+					
+					yamlOnly = cliArgs.hasOption(ONLY_YAML);
 
 					Tester tester = new Tester();
 					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath(), cliArgs.hasOption(NO_CONVERT_TO_JSON))) {
