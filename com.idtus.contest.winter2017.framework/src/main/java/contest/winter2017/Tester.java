@@ -20,8 +20,15 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 
 import org.jacoco.core.analysis.Analyzer;
@@ -238,45 +245,80 @@ public class Tester {
 	 * directly from the executable jar. We are able to run the tests and assess the output as PASS/FAIL.
 	 * 
 	 * You likely do not have to change this part of the framework. We are considering this complete and 
-	 * want your team to focus more on the SecurityTests.  
+	 * want your team to focus more on the SecurityTests. 
+	 * 
+	 *  @param threads - the number of threads to use for basic tests
 	 */
-	public void executeBasicTests() {
+	public void executeBasicTests(int threads) {
 		
 		int passCount = 0;
 		int failCount = 0;
 		
+		ExecutorService executor = Executors.newFixedThreadPool(threads);
+		
+		List<Future<Boolean>> results = new LinkedList<Future<Boolean>>();
+		
 		// iterate through the lists of tests and execute each one
 		for(Test test : this.tests) {
-			 
-			// instrument the code to code coverage metrics, execute the test with given parameters, then show the output
-			Output output = instrumentAndExecuteCode(test.getParameters().toArray());
-			printBasicTestOutput(output);
-			
-			// determine the result of the test based on expected output/error regex
-			if(output.getStdOutString().matches(test.getStdOutExpectedResultRegex())
-					&& output.getStdErrString().matches(test.getStdErrExpectedResultRegex())) {
-				System.out.println("basic test result: PASS");
-				passCount++;
-			}
-			else {
-				System.out.println("basic test result: FAIL ");
-				failCount++;
-				
-				// since we have a failed basic test, show the expectation for the stdout
-				if(!output.getStdOutString().matches(test.getStdOutExpectedResultRegex())) {
-					System.out.println("\t ->stdout: "+output.getStdOutString());
-					System.out.println("\t ->did not match expected stdout regex: "+test.getStdOutExpectedResultRegex());
-				}
-				
-				// since we have a failed basic test, show the expectation for the stderr
-				if(!output.getStdErrString().matches(test.getStdErrExpectedResultRegex())) {
-					System.out.println("\t ->stderr: "+output.getStdErrString());
-					System.out.println("\t ->did not match expected stderr regex: "+test.getStdErrExpectedResultRegex());
+			Future<Boolean> f = executor.submit(new Callable<Boolean>() {
+				@Override
+				public Boolean call() {
+					// instrument the code to code coverage metrics, execute the test with given parameters, then show the output
+					Output output = instrumentAndExecuteCode(test.getParameters().toArray());
+					printBasicTestOutput(output);
 					
+					boolean passed = false;
+					
+					// determine the result of the test based on expected output/error regex
+					if(output.getStdOutString().matches(test.getStdOutExpectedResultRegex())
+							&& output.getStdErrString().matches(test.getStdErrExpectedResultRegex())) {
+						System.out.println("basic test result: PASS");
+						passed = true;
+					}
+					else {
+						System.out.println("basic test result: FAIL ");
+						
+						// since we have a failed basic test, show the expectation for the stdout
+						if(!output.getStdOutString().matches(test.getStdOutExpectedResultRegex())) {
+							System.out.println("\t ->stdout: "+output.getStdOutString());
+							System.out.println("\t ->did not match expected stdout regex: "+test.getStdOutExpectedResultRegex());
+						}
+						
+						// since we have a failed basic test, show the expectation for the stderr
+						if(!output.getStdErrString().matches(test.getStdErrExpectedResultRegex())) {
+							System.out.println("\t ->stderr: "+output.getStdErrString());
+							System.out.println("\t ->did not match expected stderr regex: "+test.getStdErrExpectedResultRegex());
+							
+						}
+					}
+					System.out.println(HORIZONTAL_LINE);
+					return passed;
 				}
-			}
-			System.out.println(HORIZONTAL_LINE);
+			});
+			results.add(f);
 		} 
+		
+		executor.shutdown();
+		try {
+			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+		}
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		for (Future<Boolean> r : results) {
+			try {
+				if (r.get()) {
+					passCount++;
+				}
+				else {
+					failCount++;
+				}
+			} catch (InterruptedException | ExecutionException e) {
+				failCount++;
+			}
+		}
+
 		// print the basic test results and the code coverage associated with the basic tests
 		double percentCovered = generateSummaryCodeCoverageResults();
 		System.out.println("basic test results: " + (passCount + failCount) + " total, " + passCount + " pass, " + failCount + " fail, " + percentCovered + " percent covered");

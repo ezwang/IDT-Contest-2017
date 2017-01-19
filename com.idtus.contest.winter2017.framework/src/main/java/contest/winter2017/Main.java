@@ -68,6 +68,11 @@ public class Main {
 	public static final String ONLY_YAML = "toolChain";
 	
 	/**
+	 * number of threads to use for basic tests
+	 */
+	public static final String BASIC_TEST_THREADS = "basicThreads";
+	
+	/**
 	 * Entry-point method for the black-box testing framework 
 	 * 
 	 * @param args - String array of command line arguments
@@ -81,8 +86,9 @@ public class Main {
 		options.addOption(JACOCO_OUTPUT_PATH, true, "path to directory for jacoco output");
 		options.addOption(JACOCO_AGENT_JAR_PATH, true, "path to the jacoco agent jar");
 		options.addOption(NO_CONVERT_TO_JSON, false, "disable converting test cases to json");
-		options.addOption(TEST_ITERATIONS, true, "number of exploratory black box tests to run");
-		options.addOption(TEST_TIME, true, "maximum time limit for exploratory black box tests to run");
+		options.addOption(TEST_ITERATIONS, true, "number of exploratory black box tests to run (default: 1000 iterations)");
+		options.addOption(TEST_TIME, true, "maximum time limit for exploratory black box tests to run (default: 300 seconds)");
+		options.addOption(BASIC_TEST_THREADS, true, "number of threads to use for basic tests (default: 5 threads)");
 		options.addOption(ONLY_YAML, false, "only output YAML summary");
 		options.addOption(HELP, false, "display this help message");
 		options.addOption(ALT_HELP, false, "display this help message");
@@ -94,6 +100,7 @@ public class Main {
 		options.getOption(TEST_TIME).setRequired(false);
 		options.getOption(TEST_ITERATIONS).setRequired(false);
 		options.getOption(ONLY_YAML).setRequired(false);
+		options.getOption(BASIC_TEST_THREADS).setRequired(false);
 		
 		try {
 			CommandLine cliArgs = parser.parse(options, args);
@@ -141,10 +148,19 @@ public class Main {
 						}
 					}
 					
+					int numThreads = 5;
+					if (cliArgs.hasOption(BASIC_TEST_THREADS)) {
+						try {
+							numThreads = Integer.parseInt(cliArgs.getOptionValue(BASIC_TEST_THREADS));
+						}
+						catch (NumberFormatException e) {
+							numThreads = 5;
+						}
+					}
 
 					Tester tester = new Tester();
 					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath(), cliArgs.hasOption(NO_CONVERT_TO_JSON))) {
-						tester.executeBasicTests();
+						tester.executeBasicTests(numThreads);
 						tester.executeSecurityTests();
 						tester.printYaml();
 					}
