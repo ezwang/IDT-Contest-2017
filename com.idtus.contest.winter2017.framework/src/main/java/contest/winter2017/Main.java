@@ -168,6 +168,7 @@ public class Main {
 					}
 					
 					yamlOnly = cliArgs.hasOption(ONLY_YAML);
+					verbose = cliArgs.hasOption(ENABLE_VERBOSE);
 
 					Tester tester = new Tester();
 					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath(), cliArgs.hasOption(NO_CONVERT_TO_JSON))) {

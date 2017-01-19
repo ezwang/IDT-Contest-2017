@@ -242,6 +242,7 @@ public class Tester {
 	
 	class BasicTestResult {
 		public boolean passed;
+		public String parameters;
 		public String error;
 	}
 	
@@ -273,6 +274,7 @@ public class Tester {
 					printBasicTestOutput(output);
 					
 					BasicTestResult result = new BasicTestResult();
+					result.parameters = test.getParameters().toString();
 					
 					String pOut = output.getStdOutString();
 					String pErr = output.getStdErrString();
@@ -286,12 +288,12 @@ public class Tester {
 						result.passed = false;
 						// since we have a failed basic test, show the expectation for the stdout
 						if(!pOut.matches(test.getStdOutExpectedResultRegex())) {
-							result.error = "\t ->stdout: "+output.getStdOutString() + "\n" + "\t ->did not match expected stdout regex: " + test.getStdOutExpectedResultRegex();
+							result.error = "\t -> stdout: "+output.getStdOutString() + "\n" + "\t ->did not match expected stdout regex: " + test.getStdOutExpectedResultRegex();
 						}
 						
 						// since we have a failed basic test, show the expectation for the stderr
 						if(!pErr.matches(test.getStdErrExpectedResultRegex())) {
-							result.error = "\t ->stderr: "+output.getStdErrString() + "\n" + "\t ->did not match expected stderr regex: "+test.getStdErrExpectedResultRegex();
+							result.error = "\t -> stderr: "+output.getStdErrString() + "\n" + "\t ->did not match expected stderr regex: "+test.getStdErrExpectedResultRegex();
 						}
 					}
 					return result;
@@ -310,14 +312,16 @@ public class Tester {
 
 		for (Future<BasicTestResult> r : results) {
 			try {
-				if (r.get().passed) {
+				BasicTestResult result = r.get();
+				if (result.passed) {
 					passCount++;
 				}
 				else {
 					failCount++;
 					if (!Main.yamlOnly) {
 						System.out.println("Test Failed!");
-						System.out.println(r.get().error);
+						System.out.println("\t -> parameters: " + result.parameters);
+						System.out.println(result.error);
 						System.out.println(HORIZONTAL_LINE);
 					}
 				}
@@ -474,19 +478,21 @@ public class Tester {
 		
 		// we are building up a command line statement that will use java -jar to execute the jar
 		// and uses jacoco to instrument that jar and collect code coverage metrics
-		String command = "java";
+		List<String> command = new LinkedList<String>();
+		command.add("java");
 		try {	
-			command += " -javaagent:" + this.jacocoAgentJarPath + "=destfile=" + this.jacocoOutputFilePath;
-			command += " -jar " + this.jarToTestPath;
+			command.add("-javaagent:" + this.jacocoAgentJarPath + "=destfile=" + this.jacocoOutputFilePath);
+			command.add("-jar");
+			command.add(this.jarToTestPath);
 			for (Object o: parameters) {
-				command += " " + o.toString();
+				command.add(o.toString());
 			}
 			
 			// show the user the command to run and prepare the process using the command
 			if (Main.verbose && !Main.yamlOnly) {
 				System.out.println("command to run: "+command);
 			}
-			process = Runtime.getRuntime().exec(command);
+			process = Runtime.getRuntime().exec(command.toArray(new String[0]));
 		
 			// prepare the stream needed to capture standard output
 			InputStream isOut = process.getInputStream();
