@@ -399,9 +399,11 @@ public class Tester {
 			Future<String> futureOut = executor.submit(new InputStringCollector(isOut));
 			Future<String> futureErr = executor.submit(new InputStringCollector(isErr));
 
-			//await completion
+			// await completion
+			process.waitFor();
 			stdOutString = futureOut.get();
 			stdErrString = futureErr.get();
+			executor.shutdownNow();
 		}
 		catch (IOException | ExecutionException | InterruptedException e) {
 			System.out.println("ERROR: IOException has prevented execution of the command: " + command); 
