@@ -1,11 +1,10 @@
 package contest.winter2017;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
@@ -19,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.io.IOUtils;
 import org.jacoco.core.analysis.Analyzer;
 import org.jacoco.core.analysis.CoverageBuilder;
 import org.jacoco.core.analysis.IClassCoverage;
@@ -42,7 +42,6 @@ import contest.winter2017.Main.TesterOptions;
  * @author IDT
  */
 public class Tester {
-
 
 	/**
 	 * suffix for all jacoco output files
@@ -91,7 +90,6 @@ public class Tester {
 	private int yaml_test_fail = 0;
 	private HashSet<String> yaml_errors = new HashSet<String>();
 
-
 	//////////////////////////////////////////
 	// PUBLIC METHODS
 	//////////////////////////////////////////
@@ -124,19 +122,20 @@ public class Tester {
 
 		TestBoundsParser testBoundsParser;
 		try {
-			if (new File(options.testFilePath).exists() && !options.disableJsonConversion) {
+			File testFile = new File(options.testFilePath);
+			if (!options.disableJsonConversion && testFile.exists()) {
 				// test cases are already converted to json, load them
-				testBoundsParser = TestBoundsParser.fromJson(options.testFilePath);
+				testBoundsParser = TestBoundsParser.fromJson(testFile);
 			}
 			else {
 				// instantiating a new Parameter Factory using the Test Bounds map
-				testBoundsParser = TestBoundsParser.fromJar(this.jarToTestPath);
+				testBoundsParser = TestBoundsParser.fromJar(jarFileToTest);
 				if (!options.disableJsonConversion) {
-					testBoundsParser.writeJson(options.testFilePath);
+					testBoundsParser.writeJson(testFile);
 				}
 			}
-
-		} catch (IOException | ReflectiveOperationException | JsonParseException e) {
+		}
+		catch (IOException | ReflectiveOperationException | JsonParseException e) {
 			System.out.println("ERROR: An exception occurred during initialization.");
 			e.printStackTrace();
 			return false;
@@ -183,51 +182,16 @@ public class Tester {
 	 *  @param threads - the number of threads to use for basic tests
 	 */
 	public void executeBasicTests(int threads) {
-
 		int passCount = 0;
 		int failCount = 0;
 
 		ExecutorService executor = Executors.newFixedThreadPool(threads);
-
 		List<Future<BasicTestResult>> results = new LinkedList<Future<BasicTestResult>>();
 
 		// iterate through the lists of tests and execute each one
-		for(Test test : this.tests) {
-			Future<BasicTestResult> f = executor.submit(new Callable<BasicTestResult>() {
-				@Override
-				public BasicTestResult call() {
-					// instrument the code to code coverage metrics, execute the test with given parameters, then show the output
-					Output output = instrumentAndExecuteCode(test.getParameters().toArray());
-					printBasicTestOutput(output);
-
-					BasicTestResult result = new BasicTestResult();
-					result.parameters = test.getParameters().toString();
-
-					String pOut = output.getStdOutString();
-					String pErr = output.getStdErrString();
-
-					// determine the result of the test based on expected output/error regex
-					if(pOut.matches(test.getStdOutExpectedResultRegex())
-							&& pErr.matches(test.getStdErrExpectedResultRegex())) {
-						result.passed = true;
-					}
-					else {
-						result.passed = false;
-						// since we have a failed basic test, show the expectation for the stdout
-						if(!pOut.matches(test.getStdOutExpectedResultRegex())) {
-							result.error = "\t -> stdout: "+output.getStdOutString() + "\n" + "\t ->did not match expected stdout regex: " + test.getStdOutExpectedResultRegex();
-						}
-
-						// since we have a failed basic test, show the expectation for the stderr
-						if(!pErr.matches(test.getStdErrExpectedResultRegex())) {
-							result.error = "\t -> stderr: "+output.getStdErrString() + "\n" + "\t ->did not match expected stderr regex: "+test.getStdErrExpectedResultRegex();
-						}
-					}
-					return result;
-				}
-			});
-			results.add(f);
-		} 
+		for (Test test : this.tests) {
+			results.add(executor.submit(new BasicTestRunner(this, test)));
+		}
 
 		executor.shutdown();
 		try {
@@ -237,23 +201,26 @@ public class Tester {
 			e.printStackTrace();
 		}
 
-		for (Future<BasicTestResult> r : results) {
+		for (Future<BasicTestResult> future : results) {
+			BasicTestResult result;
 			try {
-				BasicTestResult result = r.get();
-				if (result.passed) {
-					passCount++;
-				}
-				else {
-					failCount++;
-					if (!optionYamlOnly) {
-						System.out.println("Test Failed!");
-						System.out.println("\t -> parameters: " + result.parameters);
-						System.out.println(result.error);
-						System.out.println(HORIZONTAL_LINE);
-					}
-				}
+				result = future.get();
 			} catch (InterruptedException | ExecutionException e) {
 				failCount++;
+				continue;
+			}
+
+			if (result.passed) {
+				passCount++;
+			}
+			else {
+				failCount++;
+				if (!optionYamlOnly) {
+					System.out.println("Test Failed!");
+					System.out.println("\t -> parameters: " + result.parameters);
+					System.out.println(result.error);
+					System.out.println(HORIZONTAL_LINE);
+				}
 			}
 		}
 
@@ -400,7 +367,7 @@ public class Tester {
 	 *                     
 	 * @return Output representation of the standard out and standard error associated with the run
 	 */
-	private Output instrumentAndExecuteCode(Object[] parameters) {
+	Output instrumentAndExecuteCode(Object[] parameters) {
 		// we are building up a command line statement that will use java -jar to execute the jar
 		// and uses jacoco to instrument that jar and collect code coverage metrics
 		List<String> command = new ArrayList<String>();
@@ -418,53 +385,32 @@ public class Tester {
 		}
 
 		ProcessBuilder pb = new ProcessBuilder(command);
-		StringBuffer stdOutBuff = new StringBuffer();
-		StringBuffer stdErrBuff = new StringBuffer();
+		String stdOutString;
+		String stdErrString;
 
+		// read stdout and stderr in separate threads to avoid blocking
+		ExecutorService executor = Executors.newFixedThreadPool(2);
 		try {
 			Process process = pb.start();
-
-			// prepare the stream needed to capture standard output
 			InputStream isOut = process.getInputStream();
-			InputStreamReader isrOut = new InputStreamReader(isOut);
-			BufferedReader brOut = new BufferedReader(isrOut);
-
-			// prepare the stream needed to capture standard error
 			InputStream isErr = process.getErrorStream();
-			InputStreamReader isrErr = new InputStreamReader(isErr);
-			BufferedReader brErr = new BufferedReader(isrErr);
 
-			String line;
-			boolean outDone = false;
-			boolean errDone = false;
+			// add tasks to executor
+			Future<String> futureOut = executor.submit(new InputStringCollector(isOut));
+			Future<String> futureErr = executor.submit(new InputStringCollector(isErr));
 
-			// while standard out is not complete OR standard error is not complete
-			// continue to probe the output/error streams for the applications output
-			while (!outDone || !errDone) {
-				// monitoring the standard output from the application
-				line = brOut.readLine();
-				if (line == null) {
-					outDone = true;
-				} else {
-					stdOutBuff.append(line);
-				}
-
-				// monitoring the standard error from the application
-				line = brErr.readLine();
-				if (line == null) {
-					errDone = true;
-				} else {
-					stdErrBuff.append(line);
-				}
-			}	
-
-		} catch (IOException e) {
+			//await completion
+			stdOutString = futureOut.get();
+			stdErrString = futureErr.get();
+		}
+		catch (IOException | ExecutionException | InterruptedException e) {
 			System.out.println("ERROR: IOException has prevented execution of the command: " + command); 
+			return null;
 		}
 
 		// we now have the output as an object from the run of the black-box jar
 		// this output object contains both the standard output and the standard error
-		return new Output(stdOutBuff.toString(), stdErrBuff.toString());
+		return new Output(stdOutString, stdErrString);
 	}
 
 
@@ -472,7 +418,7 @@ public class Tester {
 	 * Method used to print the basic test output (std out/err)
 	 * @param output - Output object containing std out/err to print 
 	 */
-	private void printBasicTestOutput(Output output) {
+	void printBasicTestOutput(Output output) {
 		if (!optionYamlOnly && optionVerbose) {
 			System.out.println("stdout of execution: " + output.getStdOutString());
 			System.out.println("stderr of execution: " + output.getStdErrString());
@@ -692,5 +638,18 @@ public class Tester {
 		System.out.println(generateDetailedCodeCoverageResults());
 	}
 
+
+	private static class InputStringCollector implements Callable<String> {
+		InputStream in;
+
+		public InputStringCollector(InputStream inputStream) {
+			in = inputStream;
+		}
+
+		@Override
+		public String call() throws IOException {
+			return IOUtils.toString(in, Charset.defaultCharset());
+		}
+	}
 
 }

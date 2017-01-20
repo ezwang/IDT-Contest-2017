@@ -1,10 +1,8 @@
 package contest.winter2017;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.Files;
 
 import org.apache.commons.cli.CommandLine;
@@ -14,6 +12,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.FileUtils;
 
 
 /**
@@ -22,6 +21,7 @@ import org.apache.commons.cli.ParseException;
  * @author IDT
  */
 public class Main {
+	private static final String JACOCO_AGENT_FILENAME = "agent.jar";
 
 	/**
 	 * cli key for path to the executable black-box jar to test
@@ -239,25 +239,22 @@ public class Main {
 		return Files.createTempDirectory("jacocoOutput").toFile();
 	}
 
+	/**
+	 * Reads Jacoco agent jar bundled with this project into a temporary file.
+	 * @return path to the temporary file
+	 * @throws IOException
+	 */
 	private static File extractBundledJacocoJar() throws IOException {
 		// read file bundled with this project
-		InputStream fileStream = Main.class.getResourceAsStream("agent.jar");
+		InputStream fileStream = Main.class.getResourceAsStream(JACOCO_AGENT_FILENAME);
 
 		// open temporary output file
-		File tempFile = File.createTempFile("jacocoJar", "agent.jar");
+		File tempFile = File.createTempFile("jacocoJar", JACOCO_AGENT_FILENAME);
 		tempFile.deleteOnExit();
-		OutputStream out = new FileOutputStream(tempFile);
 
-		// copy contents of fileStream to out
-		byte[] buffer = new byte[1024];
-		int len = fileStream.read(buffer);
-		while (len != -1) {
-			out.write(buffer, 0, len);
-			len = fileStream.read(buffer);
-		}
+		// copy to file and close
+		FileUtils.copyInputStreamToFile(fileStream, tempFile);
 
-		fileStream.close();
-		out.close();
 		return tempFile;
 	}
 

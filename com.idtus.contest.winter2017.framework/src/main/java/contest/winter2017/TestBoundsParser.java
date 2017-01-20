@@ -84,12 +84,12 @@ public class TestBoundsParser {
 
 	/**
 	 * Read test bounds from a JSON file.
-	 * @param testFilePath Path to the JSON file
+	 * @param testFile The JSON file to read from
 	 * @return Parsed test bounds
 	 * @throws IOException
 	 */
-	public static TestBoundsParser fromJson(String testFilePath) throws IOException {
-		JsonReader reader = gson.newJsonReader(new FileReader(testFilePath));
+	public static TestBoundsParser fromJson(File testFile) throws IOException {
+		JsonReader reader = gson.newJsonReader(new FileReader(testFile));
 		Map<String, Object> map = gson.fromJson(reader, STRING_OBJECT_MAP);
 		return new TestBoundsParser(map);
 	}
@@ -97,27 +97,25 @@ public class TestBoundsParser {
 
 	/**
 	 * Read test bounds from a JAR file.
-	 * @param jarToTestPath Path to the JAR file
+	 * @param jarFile The JAR file to read from
 	 * @return Parsed test bounds
 	 * @throws IOException
 	 * @throws ReflectiveOperationException
 	 */
-	public static TestBoundsParser fromJar(String jarToTestPath)
+	public static TestBoundsParser fromJar(File jarFile)
 			throws IOException, ReflectiveOperationException {
-		// load up the jar under test so that we can access information about the class from 'TestBounds'
-		File jarFileToTest = new File(jarToTestPath);
-		URL fileURL = jarFileToTest.toURI().toURL();
-		URLClassLoader cl = URLClassLoader.newInstance(new URL[]{fileURL});
-
-		String jarUrlTemp = "jar:" + jarFileToTest.toURI().toString() + "!/";
-		URL jarURL = new URL(jarUrlTemp);
-		JarURLConnection jarURLconn = (JarURLConnection) jarURL.openConnection();
 
 		// figuring out where the entry-point (main class) is in the jar under test
+		URL jarURL = new URL("jar:" + jarFile.toURI().toString() + "!/");
+		JarURLConnection jarURLconn = (JarURLConnection) jarURL.openConnection();
+
 		Attributes attr = jarURLconn.getMainAttributes();
 		String mainClassName = attr.getValue(Attributes.Name.MAIN_CLASS);
 
 		// loading the TestBounds class from the jar under test
+		URL fileURL = jarFile.toURI().toURL();
+		URLClassLoader cl = URLClassLoader.newInstance(new URL[]{fileURL});
+
 		String mainClassTestBoundsName = mainClassName + "TestBounds";
 		Class<?> mainClassTestBounds = cl.loadClass(mainClassTestBoundsName);
 
@@ -146,11 +144,11 @@ public class TestBoundsParser {
 
 	/**
 	 * Write test bounds to a JSON file.
-	 * @param testFilePath Path to the JSON file
+	 * @param testFile The JSON file to write to
 	 * @throws IOException
 	 */
-	public void writeJson(String testFilePath) throws IOException {
-		JsonWriter writer = gson.newJsonWriter(new FileWriter(testFilePath));
+	public void writeJson(File testFile) throws IOException {
+		JsonWriter writer = gson.newJsonWriter(new FileWriter(testFile));
 		gson.toJson(this.originalMap, STRING_OBJECT_MAP, writer);
 		writer.close();
 	}
