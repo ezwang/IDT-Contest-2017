@@ -1,8 +1,6 @@
 package contest.winter2017;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**	
  *	 Parameters used to execute jars are tricky things (think command line flags), so we developed a ParameterFactory 
@@ -29,36 +27,15 @@ import java.util.Map;
  *  
  *   @author IDT
  */
-public class ParameterFactory {
+public abstract class ParameterFactory {
 
-	public Map<String, Object> inputMap;
-	private boolean bounded;
-
-	
-	/**
-	 * ctr for Parameter Factory class
-	 * @param inputMap - input map that describes all of the parameter data associated with an executable jar
-	 */
-	@SuppressWarnings({ "unchecked" })
-	public ParameterFactory(Map<String, Object> inputMap) {
-		this.inputMap = inputMap;
-		if (this.inputMap.get("fixed parameter list") != null) {
-			this.bounded = true;
-		} else {
-			this.bounded = false;
-		}
-	}
-
-	
 	/**
 	 * Method to test if the parameters associated with this jar are fixed (aka bounded)
 	 * @return true if the parameters are fixed (bounded) and false if they are not
 	 */
-	public boolean isBounded() {
-		return this.bounded;
-	}
+	public abstract boolean isBounded();
 
-	
+
 	/**
 	 * Method to deal with the complexity of dependent parameters. Also handles fixed parameters.
 	 * For more information about dependent and fixed parameters, see explanation at the top of this
@@ -70,49 +47,6 @@ public class ParameterFactory {
 	 *        definitions, this is the accumulated parameters that have been passed in until now
 	 * @return List of Parameter objects containing all metadata known about the each Parameter
 	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public List<Parameter> getNext(List<String> previousParameterValues) {
-		
-		// ultimately we are returning all possible parameters for a given index (since we could be dealing with dependent parameters 
-		// and enumeration parameters)
-		List<Parameter> possibleParamsList = new ArrayList<Parameter>();
+	public abstract List<Parameter> getNext(List<String> previousParameterValues);
 
-		StringBuffer sb = new StringBuffer();
-		for (String paramString : previousParameterValues) {
-			sb.append(" " + paramString);
-		}
-		String currentParamsString = sb.toString();
-
-		// process all dependent parameters
-		Map<String, Object> dependentParametersMap = (Map<String, Object>)this.inputMap.get("dependent parameters");
-		if (dependentParametersMap != null) {
-
-			for (Map.Entry<String, Object> mapEntry : dependentParametersMap.entrySet()) {
-
-				if (currentParamsString.matches(mapEntry.getKey())|| (mapEntry.getKey().isEmpty() && currentParamsString.isEmpty())) {
-					Object obj = mapEntry.getValue();
-					if (obj instanceof Map) {
-						possibleParamsList.add(new Parameter((Map) mapEntry.getValue()));
-					} else {
-						for (Map paramMap : (List<Map>) obj) {
-							possibleParamsList.add(new Parameter(paramMap));
-						}
-					}
-				}
-			}
-
-		// if there are no dependent parameters, process the fixed parameters
-		} else {
-			List fixedParamList = (List) this.inputMap.get("fixed parameter list");
-
-			if (previousParameterValues.size() < fixedParamList.size()) {
-				Map paramMap = (Map) fixedParamList.get(previousParameterValues.size());
-				possibleParamsList.add(new Parameter(paramMap));
-			}
-		}
-
-		// return the list of possible parameters for this index
-		return possibleParamsList;
-	}
-	
 }

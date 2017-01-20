@@ -15,8 +15,7 @@ public class Test {
 	 * List of parameter values that will be passed into the executable jar as 
 	 * as single test
 	 */
-	@SuppressWarnings("rawtypes")
-	private List parameters;
+	private List<Object> parameters;
 	
 	/**
 	 * The regex string that describes the expected std out result for the test
@@ -33,20 +32,19 @@ public class Test {
 	 * Ctr for Test object
 	 * @param inputMap
 	 */
-	@SuppressWarnings("rawtypes")
-	public Test(Map inputMap) {
-		this.parameters = (List)inputMap.get("parameters");
-		this.stdOutExpectedResultRegex = (String)inputMap.get("stdOutExpectedResultRegex");
-		this.stdErrExpectedResultRegex = (String)inputMap.get("stdErrExpectedResultRegex");
+	@SuppressWarnings("unchecked")
+	public Test(Map<String, Object> inputMap) {
+		this.parameters = (List<Object>) inputMap.get("parameters");
+		this.stdOutExpectedResultRegex = (String) inputMap.get("stdOutExpectedResultRegex");
+		this.stdErrExpectedResultRegex = (String) inputMap.get("stdErrExpectedResultRegex");
 	}
-	
-	
+
+
 	/**
 	 * Getter for parameters List
 	 * @return
 	 */
-	@SuppressWarnings("rawtypes")
-	public List getParameters() {
+	public List<Object> getParameters() {
 		return parameters;
 	}
 
