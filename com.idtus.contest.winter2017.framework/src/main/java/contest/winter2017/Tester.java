@@ -261,7 +261,8 @@ public class Tester {
 		double percentCovered = generateSummaryCodeCoverageResults();
 
 		if (!optionYamlOnly) {
-			System.out.println("basic test results: " + (passCount + failCount) + " total, " + passCount + " pass, " + failCount + " fail, " + percentCovered + " percent covered");
+			System.out.printf("basic test results: %d total, %d pass, %d fail, %.2f percent covered%n",
+					passCount + failCount, passCount, failCount, percentCovered);
 			System.out.println(HORIZONTAL_LINE);
 		}
 
@@ -400,39 +401,38 @@ public class Tester {
 	 * @return Output representation of the standard out and standard error associated with the run
 	 */
 	private Output instrumentAndExecuteCode(Object[] parameters) {
-
-		Process process = null;
-		Output output = null;	
-
 		// we are building up a command line statement that will use java -jar to execute the jar
 		// and uses jacoco to instrument that jar and collect code coverage metrics
-		List<String> command = new LinkedList<String>();
+		List<String> command = new ArrayList<String>();
 		command.add("java");
-		try {	
-			command.add("-javaagent:" + this.jacocoAgentJarPath + "=destfile=" + this.jacocoOutputFilePath);
-			command.add("-jar");
-			command.add(this.jarToTestPath);
-			for (Object o: parameters) {
-				command.add(o.toString());
-			}
+		command.add("-javaagent:" + this.jacocoAgentJarPath + "=destfile=" + this.jacocoOutputFilePath);
+		command.add("-jar");
+		command.add(this.jarToTestPath);
+		for (Object o : parameters) {
+			command.add(o.toString());
+		}
 
-			// show the user the command to run and prepare the process using the command
-			if (optionVerbose && !optionYamlOnly) {
-				System.out.println("command to run: "+command);
-			}
-			process = Runtime.getRuntime().exec(command.toArray(new String[0]));
+		// show the user the command to run and prepare the process using the command
+		if (optionVerbose && !optionYamlOnly) {
+			System.out.println("command to run: " + command);
+		}
+
+		ProcessBuilder pb = new ProcessBuilder(command);
+		StringBuffer stdOutBuff = new StringBuffer();
+		StringBuffer stdErrBuff = new StringBuffer();
+
+		try {
+			Process process = pb.start();
 
 			// prepare the stream needed to capture standard output
 			InputStream isOut = process.getInputStream();
 			InputStreamReader isrOut = new InputStreamReader(isOut);
 			BufferedReader brOut = new BufferedReader(isrOut);
-			StringBuffer stdOutBuff = new StringBuffer();
 
 			// prepare the stream needed to capture standard error
 			InputStream isErr = process.getErrorStream();
 			InputStreamReader isrErr = new InputStreamReader(isErr);
 			BufferedReader brErr = new BufferedReader(isrErr);
-			StringBuffer stdErrBuff = new StringBuffer();
 
 			String line;
 			boolean outDone = false;
@@ -440,52 +440,31 @@ public class Tester {
 
 			// while standard out is not complete OR standard error is not complete
 			// continue to probe the output/error streams for the applications output
-			while(!outDone || !errDone) {
-
+			while (!outDone || !errDone) {
 				// monitoring the standard output from the application
-				boolean outReady = true;
-				if(outReady) {
-					line = brOut.readLine();
-					if(line == null) {
-						outDone = true;
-					}
-					else {
-						stdOutBuff.append(line);
-					}
+				line = brOut.readLine();
+				if (line == null) {
+					outDone = true;
+				} else {
+					stdOutBuff.append(line);
 				}
 
 				// monitoring the standard error from the application
-				boolean errReady = true;
-				if(errReady) {
-					line = brErr.readLine();
-					if(line == null) {
-						errDone = true;
-					}
-					else {
-						stdErrBuff.append(line);
-					}
-				}
-
-				// if standard out and standard error are not ready, wait for 250ms 
-				// and try again to monitor the streams
-				if(!outReady && !errReady)  {
-					try {
-						Thread.sleep(250);
-					} catch (InterruptedException e) {
-						// NOP
-					}
+				line = brErr.readLine();
+				if (line == null) {
+					errDone = true;
+				} else {
+					stdErrBuff.append(line);
 				}
 			}	
-
-			// we now have the output as an object from the run of the black-box jar
-			// this output object contains both the standard output and the standard error
-			output = new Output(stdOutBuff.toString(), stdErrBuff.toString());
 
 		} catch (IOException e) {
 			System.out.println("ERROR: IOException has prevented execution of the command: " + command); 
 		}
 
-		return output;
+		// we now have the output as an object from the run of the black-box jar
+		// this output object contains both the standard output and the standard error
+		return new Output(stdOutBuff.toString(), stdErrBuff.toString());
 	}
 
 
@@ -519,8 +498,9 @@ public class Tester {
 			final ExecutionDataReader reader = new ExecutionDataReader(in);
 			reader.setSessionInfoVisitor(new ISessionInfoVisitor() {
 				public void visitSessionInfo(final SessionInfo info) {
-					System.out.printf("Session \"%s\": %s - %s%n", info.getId(), new Date(
-							info.getStartTimeStamp()),
+					System.out.printf("Session \"%s\": %s - %s%n",
+							info.getId(),
+							new Date(info.getStartTimeStamp()),
 							new Date(info.getDumpTimeStamp()));
 				}
 			});
@@ -615,7 +595,7 @@ public class Tester {
 	 * @return String representing code coverage results
 	 */
 	private String generateDetailedCodeCoverageResults() {
-		String executionResults = "";
+		StringBuilder executionResults = new StringBuilder();
 		try {
 			File executionDataFile = new File(this.jacocoOutputFilePath);
 			ExecFileLoader execFileLoader = new ExecFileLoader();
@@ -628,26 +608,27 @@ public class Tester {
 			analyzer.analyzeAll(new File(this.jarToTestPath));
 
 			for (final IClassCoverage cc : coverageBuilder.getClasses()) {
-				executionResults += "Coverage of class " + cc.getName() + ":\n";
-				executionResults += getMetricResultString("instructions", cc.getInstructionCounter());
-				executionResults += getMetricResultString("branches", cc.getBranchCounter());
-				executionResults += getMetricResultString("lines", cc.getLineCounter());
-				executionResults += getMetricResultString("methods", cc.getMethodCounter());
-				executionResults += getMetricResultString("complexity", cc.getComplexityCounter());
+				executionResults.append("Coverage of class " + cc.getName() + ":\n");
+				executionResults.append(getMetricResultString("instructions", cc.getInstructionCounter()));
+				executionResults.append(getMetricResultString("branches", cc.getBranchCounter()));
+				executionResults.append(getMetricResultString("lines", cc.getLineCounter()));
+				executionResults.append(getMetricResultString("methods", cc.getMethodCounter()));
+				executionResults.append(getMetricResultString("complexity", cc.getComplexityCounter()));
 
 				// adding this to a string is a little impractical with the size of some of the files, 
 				// so we are commenting it out, but it shows that you can get the coverage status of each line
 				// if you wanted to add debug argument to display this level of detail at command line level.... 
-				//
-				//for (int i = cc.getFirstLine(); i <= cc.getLastLine(); i++) {
-				//	executionResults += "Line " + Integer.valueOf(i) + ": " + getStatusString(cc.getLine(i).getStatus()) + "\n";
-				//}
+				/*
+				for (int i = cc.getFirstLine(); i <= cc.getLastLine(); i++) {
+					executionResults.append("Line " + Integer.valueOf(i) + ": " + getStatusString(cc.getLine(i).getStatus()) + "\n");
+				}
+				*/
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
-		return executionResults;
+		return executionResults.toString();
 	}
 
 
@@ -679,9 +660,8 @@ public class Tester {
 	 * @return
 	 */
 	private String getMetricResultString(final String unit, final ICounter counter) {
-		final Integer missedCount = Integer.valueOf(counter.getMissedCount());
-		final Integer totalCount = Integer.valueOf(counter.getTotalCount());
-		return missedCount.toString() + " of " + totalCount.toString() + " " + unit + " missed\n";
+		return String.format("%d of %d missed%n",
+				counter.getMissedCount(), counter.getTotalCount());
 	}
 
 
