@@ -58,6 +58,8 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
+import contest.winter2017.Main.TesterOptions;
+
 /**
  * Class that will handle execution of basic tests and exploratory security test on a black-box executable jar.  
  * 
@@ -108,6 +110,9 @@ public class Tester {
 	 */
 	private ParameterFactory parameterFactory = null;
 	
+	private boolean optionYamlOnly;
+	private boolean optionVerbose;
+
 	private int yaml_test_pass = 0;
 	private int yaml_test_fail = 0;
 	private HashSet<String> yaml_errors = new HashSet<String>();
@@ -129,11 +134,14 @@ public class Tester {
 	 * @return boolean - false if initialization encounters an Exception, true if it does not
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public boolean init(String initJarToTestPath, String initJacocoOutputDirPath, String initJacocoAgentJarPath, String testFile, Boolean disableJsonConversion) {
-		this.jarToTestPath = initJarToTestPath;
-		this.jacocoOutputDirPath = initJacocoOutputDirPath;
-		this.jacocoAgentJarPath = initJacocoAgentJarPath;
-		
+	public boolean init(TesterOptions options) {
+		this.jarToTestPath = options.jarToTestPath;
+		this.jacocoOutputDirPath = options.jacocoOutputDirPath;
+		this.jacocoAgentJarPath = options.jacocoAgentJarPath;
+
+		this.optionYamlOnly = options.yamlOnly;
+		this.optionVerbose = options.verbose;
+
 		File jarFileToTest = new File(this.jarToTestPath);
 		this.jacocoOutputFilePath = Paths.get(this.jacocoOutputDirPath, jarFileToTest.getName().replaceAll("\\.", "_"), JACOCO_OUTPUT_FILE_SUFFIX).toString();
 		
@@ -154,9 +162,9 @@ public class Tester {
 				
 			}).create();
 			
-			if (new File(testFile).exists() && !disableJsonConversion) {
+			if (new File(options.testFilePath).exists() && !options.disableJsonConversion) {
 				// test cases are already converted to json, load them
-				this.parameterFactory = gson.fromJson(new String(Files.readAllBytes(Paths.get(testFile))), ParameterFactory.class);
+				this.parameterFactory = gson.fromJson(new String(Files.readAllBytes(Paths.get(options.testFilePath))), ParameterFactory.class);
 			}
 			else {
 				// load up the jar under test so that we can access information about the class from 'TestBounds'
@@ -194,8 +202,8 @@ public class Tester {
 				// instantiating a new Parameter Factory using the Test Bounds map
 				this.parameterFactory = new ParameterFactory(mainClassTestBoundsMap);
 				
-				if (!disableJsonConversion) {
-					Files.write(Paths.get(testFile), gson.toJson(this.parameterFactory).getBytes());
+				if (!options.disableJsonConversion) {
+					Files.write(Paths.get(options.testFilePath), gson.toJson(this.parameterFactory).getBytes());
 				}
 			}
 			
@@ -210,7 +218,7 @@ public class Tester {
 			System.out.println("ERROR: An exception occurred during initialization.");
 			e.printStackTrace();
 			return false;
-		} 
+		}
 		
 		return true;
 	}
@@ -318,7 +326,7 @@ public class Tester {
 				}
 				else {
 					failCount++;
-					if (!Main.yamlOnly) {
+					if (!optionYamlOnly) {
 						System.out.println("Test Failed!");
 						System.out.println("\t -> parameters: " + result.parameters);
 						System.out.println(result.error);
@@ -333,7 +341,7 @@ public class Tester {
 		// print the basic test results and the code coverage associated with the basic tests
 		double percentCovered = generateSummaryCodeCoverageResults();
 		
-		if (!Main.yamlOnly) {
+		if (!optionYamlOnly) {
 			System.out.println("basic test results: " + (passCount + failCount) + " total, " + passCount + " pass, " + failCount + " fail, " + percentCovered + " percent covered");
 			System.out.println(HORIZONTAL_LINE);
 		}
@@ -489,7 +497,7 @@ public class Tester {
 			}
 			
 			// show the user the command to run and prepare the process using the command
-			if (Main.verbose && !Main.yamlOnly) {
+			if (optionVerbose && !optionYamlOnly) {
 				System.out.println("command to run: "+command);
 			}
 			process = Runtime.getRuntime().exec(command.toArray(new String[0]));
@@ -566,7 +574,7 @@ public class Tester {
 	 * @param output - Output object containing std out/err to print 
 	 */
 	private void printBasicTestOutput(Output output) {
-		if (!Main.yamlOnly && Main.verbose) {
+		if (!optionYamlOnly && optionVerbose) {
 			System.out.println("stdout of execution: " + output.getStdOutString());
 			System.out.println("stderr of execution: " + output.getStdErrString());
 		}
@@ -578,7 +586,7 @@ public class Tester {
 	 * @throws IOException
 	 */
 	private void printRawCoverageStats()  {
-		if (Main.yamlOnly) {
+		if (optionYamlOnly) {
 			return;
 		}
 		
@@ -766,7 +774,7 @@ public class Tester {
 	 */
 	@Deprecated 
 	private void showCodeCoverageResultsExample() {
-		if (Main.yamlOnly) {
+		if (optionYamlOnly) {
 			return;
 		}
 		

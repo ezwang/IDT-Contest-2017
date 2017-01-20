@@ -2,8 +2,11 @@ package contest.winter2017;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -66,13 +69,11 @@ public class Main {
 	 * only output YAML
 	 */
 	public static final String ONLY_YAML = "toolChain";
-	public static boolean yamlOnly = false;
 	
 	/**
 	 * output more information
 	 */
 	public static final String ENABLE_VERBOSE = "verbose";
-	public static boolean verbose = false;
 	
 	/**
 	 * number of threads to use for basic tests
@@ -80,15 +81,72 @@ public class Main {
 	public static final String BASIC_TEST_THREADS = "basicThreads";
 	
 	/**
+	 * A class used to aid parsing options from the command line.
+	 * TODO: Replace this with something better.
+	 */
+	public static class TesterOptions {
+		public String jarToTestPath;
+		public String jacocoOutputDirPath;
+		public String jacocoAgentJarPath;
+		public String testFilePath;
+		public int numThreads;
+		public boolean disableJsonConversion;
+		public boolean yamlOnly;
+		public boolean verbose;
+	}
+
+
+	/**
 	 * Entry-point method for the black-box testing framework 
 	 * 
 	 * @param args - String array of command line arguments
 	 */
 	public static void main(String[] args) {
-		
 		CommandLineParser parser = new DefaultParser();
+		Options options = getCliOptions();
+		CommandLine cliArgs;
 		
+		try {
+			cliArgs = parser.parse(options, args);
+			assert cliArgs != null;
+		} catch (ParseException exp) {
+			System.err.println("An error occurred during command line parsing: " + exp.getMessage());
+			return;
+		}
+
+		if (cliArgs.hasOption(JAR_TO_TEST_PATH)) {
+			TesterOptions testerOptions;
+			try {
+				testerOptions = parseArguments(cliArgs);
+			} catch (IOException ex) {
+				ex.printStackTrace();
+				return;
+			}
+
+			Tester tester = new Tester();
+			boolean success = tester.init(testerOptions);
+			if (success) {
+				tester.executeBasicTests(testerOptions.numThreads);
+				tester.executeSecurityTests();
+				tester.printYaml();
+			}
+		}
+		
+		// if the user has requested help
+		else if (cliArgs.hasOption(HELP) || cliArgs.hasOption(ALT_HELP)) {	
+			printHelp(options);
+		}
+
+	    // user did not request help and we had an inadequate number of arguments
+		else {
+			System.err.println("Failed to execute - the -" + JAR_TO_TEST_PATH + " argument is required.");
+			printHelp(options);
+		}
+	}
+	
+	private static Options getCliOptions() {
 		Options options = new Options();
+		
 		options.addOption(JAR_TO_TEST_PATH, true, "path to the executable jar to test");
 		options.addOption(JACOCO_OUTPUT_PATH, true, "path to directory for jacoco output");
 		options.addOption(JACOCO_AGENT_JAR_PATH, true, "path to the jacoco agent jar");
@@ -109,101 +167,89 @@ public class Main {
 		options.getOption(TEST_ITERATIONS).setRequired(false);
 		options.getOption(ONLY_YAML).setRequired(false);
 		options.getOption(BASIC_TEST_THREADS).setRequired(false);
-		options.getOption(ENABLE_VERBOSE).setRequired(false);;
+		options.getOption(ENABLE_VERBOSE).setRequired(false);
 		
-		try {
-			CommandLine cliArgs = parser.parse(options, args);
-			if (cliArgs != null){
-				if (cliArgs.hasOption(JAR_TO_TEST_PATH)) {
-					
-					String jarToTestPath = cliArgs.getOptionValue(JAR_TO_TEST_PATH);
-					File jarToTestFile = new File(jarToTestPath);
-					File testFile = new File(jarToTestFile.getParent(), jarToTestFile.getName().replaceFirst("[.][^.]+$", "") + ".json");
-					
-					String jacocoOutputDirPath;
-					if (cliArgs.hasOption(JACOCO_OUTPUT_PATH)) {
-						jacocoOutputDirPath = cliArgs.getOptionValue(JACOCO_OUTPUT_PATH);
-					}
-					else {
-						jacocoOutputDirPath = createTempDir().getAbsolutePath();
-					}
-					String jacocoAgentJarPath = null;
-					if (cliArgs.hasOption(JACOCO_AGENT_JAR_PATH)) {
-						jacocoAgentJarPath = cliArgs.getOptionValue(JACOCO_AGENT_JAR_PATH);
-					}
-					else {
-						try {
-							File tempFile = File.createTempFile("jacocoJar", "agent.jar");
-							tempFile.deleteOnExit();
-							
-							InputStream fileStream = Main.class.getResourceAsStream("agent.jar");
-							
-							OutputStream out = new FileOutputStream(tempFile);
-							byte[] buffer = new byte[1024];
-							int len = fileStream.read(buffer);
-							while (len != -1) {
-								out.write(buffer, 0, len);
-								len = fileStream.read(buffer);
-							}
-							fileStream.close();
-							out.close();
-							jacocoAgentJarPath = tempFile.getAbsolutePath();
-						}
-						catch (Exception ex) {
-							System.err.println("Error: Unable to extract Jacoco Agent jar!");
-							System.err.println("You can use the -" + JACOCO_OUTPUT_PATH + " option to specify the agent file.");
-							ex.printStackTrace();
-							System.exit(0);
-						}
-					}
-					
-					int numThreads = 5;
-					if (cliArgs.hasOption(BASIC_TEST_THREADS)) {
-						try {
-							numThreads = Integer.parseInt(cliArgs.getOptionValue(BASIC_TEST_THREADS));
-						}
-						catch (NumberFormatException e) {
-							numThreads = 5;
-						}
-					}
-					
-					yamlOnly = cliArgs.hasOption(ONLY_YAML);
-					verbose = cliArgs.hasOption(ENABLE_VERBOSE);
-
-					Tester tester = new Tester();
-					if (tester.init(jarToTestPath, jacocoOutputDirPath, jacocoAgentJarPath, testFile.getAbsolutePath(), cliArgs.hasOption(NO_CONVERT_TO_JSON))) {
-						tester.executeBasicTests(numThreads);
-						tester.executeSecurityTests();
-						tester.printYaml();
-					}
-					
-				// if the user has requested help
-				} else if (cliArgs.hasOption(HELP) || cliArgs.hasOption(ALT_HELP)) {
-					
-					printHelp(options);
-					
-			    // user did not request help and we had an inadequate number of arguments
-				} else {
-					System.out.println("Failed to execute - the -" + JAR_TO_TEST_PATH + " argument is required.");
-					printHelp(options);
-				}
-			}
-		
-		} catch( ParseException exp ) {
-		    System.out.println( "An error occurred during command line parsing: " + exp.getMessage());
-		}
+		return options;
 	}
 	
-	private static File createTempDir() {
-		File baseDir = new File(System.getProperty("java.io.tmpdir"));
-		String baseName = "jacocoOutput-" + System.currentTimeMillis() + "-";
-		for (int x = 0; x < 10; x++) {
-			File tempDir = new File(baseDir, baseName + x);
-			if (tempDir.mkdir()) {
-				return tempDir;
+	
+	private static TesterOptions parseArguments(CommandLine cliArgs) throws IOException {
+		TesterOptions options = new TesterOptions();
+
+		// get jarToTestPath
+		assert cliArgs.hasOption(JAR_TO_TEST_PATH);
+		options.jarToTestPath = cliArgs.getOptionValue(JAR_TO_TEST_PATH);
+		
+		// get testFilePath
+		File jarToTestFile = new File(options.jarToTestPath);
+		File testFile = new File(jarToTestFile.getParent(), jarToTestFile.getName().replaceFirst("[.][^.]+$", "") + ".json");
+		options.testFilePath = testFile.getAbsolutePath();
+
+		// get jacocoOutputDirPath
+		if (cliArgs.hasOption(JACOCO_OUTPUT_PATH)) {
+			options.jacocoOutputDirPath = cliArgs.getOptionValue(JACOCO_OUTPUT_PATH);
+		} else {
+			options.jacocoOutputDirPath = createTempDir().getAbsolutePath();
+		}
+
+		// get jacocoAgentJarPath
+		if (cliArgs.hasOption(JACOCO_AGENT_JAR_PATH)) {
+			options.jacocoAgentJarPath = cliArgs.getOptionValue(JACOCO_AGENT_JAR_PATH);
+		}
+		else {
+			try {
+				File tempFile = extractBundledJacocoJar();
+				options.jacocoAgentJarPath = tempFile.getAbsolutePath();
+			}
+			catch (IOException ex) {
+				System.err.println("Error: Unable to extract Jacoco Agent jar!");
+				System.err.println("You can use the -" + JACOCO_OUTPUT_PATH + " option to specify the agent file.");
+				throw ex;
 			}
 		}
-		throw new IllegalStateException("Failed to create temporary directory in " + baseDir.getAbsolutePath() + "!");
+		
+		// get numThreads
+		options.numThreads = 1;
+		if (cliArgs.hasOption(BASIC_TEST_THREADS)) {
+			try {
+				options.numThreads = Integer.parseInt(cliArgs.getOptionValue(BASIC_TEST_THREADS));
+			}
+			catch (NumberFormatException e) {
+				// pass
+			}
+		}
+		
+		options.yamlOnly = cliArgs.hasOption(ONLY_YAML);
+		options.verbose = cliArgs.hasOption(ENABLE_VERBOSE);
+		options.disableJsonConversion = cliArgs.hasOption(NO_CONVERT_TO_JSON);
+		
+		return options;
+	}
+	
+	private static File createTempDir() throws IOException {
+		return Files.createTempDirectory("jacocoOutput").toFile();
+	}
+	
+	private static File extractBundledJacocoJar() throws IOException {
+		// read file bundled with this project
+		InputStream fileStream = Main.class.getResourceAsStream("agent.jar");
+		
+		// open temporary output file
+		File tempFile = File.createTempFile("jacocoJar", "agent.jar");
+		tempFile.deleteOnExit();
+		OutputStream out = new FileOutputStream(tempFile);
+		
+		// copy contents of fileStream to out
+		byte[] buffer = new byte[1024];
+		int len = fileStream.read(buffer);
+		while (len != -1) {
+			out.write(buffer, 0, len);
+			len = fileStream.read(buffer);
+		}
+		
+		fileStream.close();
+		out.close();
+		return tempFile;
 	}
 	
 	/**
