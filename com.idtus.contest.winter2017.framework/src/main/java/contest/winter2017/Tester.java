@@ -114,9 +114,9 @@ public class Tester {
 		assert securityTester != null;
 
 		System.out.println(basicTester.getYaml());
-		System.out.println(securityTester.getYaml());
 		System.out.println("Total code coverage percentage: " +
 				coverage.generateSummaryCodeCoverageResults());
+		System.out.println(securityTester.getYaml());
 	}
 
 

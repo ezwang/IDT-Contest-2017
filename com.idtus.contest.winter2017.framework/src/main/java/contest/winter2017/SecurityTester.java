@@ -109,7 +109,7 @@ public class SecurityTester {
 
 		// This example demonstrates how to execute the black-box jar with concrete parameters
 		// and how to access (print to screen) the standard output and error from the run
-		Output output = programRunner.instrumentAndExecuteCode(previousParameterStrings);
+		output = programRunner.instrumentAndExecuteCode(previousParameterStrings);
 
 		if (!output.getStdErrString().isEmpty()) {
 			String err = output.getStdErrString().trim();
