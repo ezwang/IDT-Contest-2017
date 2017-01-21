@@ -19,13 +19,27 @@ import org.jacoco.core.tools.ExecFileLoader;
 import contest.winter2017.Tester.TesterOptions;
 
 class JacocoCoverageAnalyzer {
-	private final String jarToTestPath;
 	private final String jacocoOutputFilePath;
+	private final CoverageBuilder coverageBuilder;
 
-	public JacocoCoverageAnalyzer(TesterOptions options) {
-		this.jarToTestPath = options.jarToTestPath;
+	public JacocoCoverageAnalyzer(TesterOptions options) throws IOException {
 		this.jacocoOutputFilePath = options.jacocoOutputFilePath;
+
+		// creating a new file for output in the jacoco output directory (one of the application arguments)
+		File executionDataFile = new File(this.jacocoOutputFilePath);
+		ExecFileLoader execFileLoader = new ExecFileLoader();
+		execFileLoader.load(executionDataFile);
+
+		// use CoverageBuilder and Analyzer to assess code coverage from jacoco output file
+		coverageBuilder = new CoverageBuilder();
+		final Analyzer analyzer = new Analyzer(
+				execFileLoader.getExecutionDataStore(), coverageBuilder);
+
+		// analyzeAll is the way to go to analyze all classes inside a container (jar or zip or directory)
+		File jarToTest = new File(options.jarToTestPath);
+		analyzer.analyzeAll(jarToTest);
 	}
+
 
 	/**
 	 * Method used to print raw code coverage stats including hits/probes
@@ -89,46 +103,29 @@ class JacocoCoverageAnalyzer {
 	 * @return double representation of the percentage of code covered during testing
 	 */
 	public double generateSummaryCodeCoverageResults() {
-		double percentCovered = 0.0;
 		long total = 0;
 		long covered = 0;
-		try {
-			// creating a new file for output in the jacoco output directory (one of the application arguments)
-			File executionDataFile = new File(this.jacocoOutputFilePath);
-			ExecFileLoader execFileLoader = new ExecFileLoader();
-			execFileLoader.load(executionDataFile);
 
-			// use CoverageBuilder and Analyzer to assess code coverage from jacoco output file
-			final CoverageBuilder coverageBuilder = new CoverageBuilder();
-			final Analyzer analyzer = new Analyzer(
-					execFileLoader.getExecutionDataStore(), coverageBuilder);
-
-			// analyzeAll is the way to go to analyze all classes inside a container (jar or zip or directory)
-			analyzer.analyzeAll(new File(this.jarToTestPath));
-
-
-			for (final IClassCoverage cc : coverageBuilder.getClasses()) {
-
-				// report code coverage from all classes that are not the TestBounds class within the jar
-				if(cc.getName().endsWith("TestBounds") == false) {
-					total += cc.getInstructionCounter().getTotalCount();
-					total += cc.getBranchCounter().getTotalCount();
-					total += cc.getLineCounter().getTotalCount();
-					total += cc.getMethodCounter().getTotalCount();
-					total += cc.getComplexityCounter().getTotalCount();
-
-					covered += cc.getInstructionCounter().getCoveredCount();
-					covered += cc.getBranchCounter().getCoveredCount();
-					covered += cc.getLineCounter().getCoveredCount();
-					covered += cc.getMethodCounter().getCoveredCount();
-					covered += cc.getComplexityCounter().getCoveredCount();
-				}
+		for (final IClassCoverage cc : coverageBuilder.getClasses()) {
+			// ignore the TestBounds class within the jar
+			if (cc.getName().endsWith("TestBounds")) {
+				continue;
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
+
+			total += cc.getInstructionCounter().getTotalCount();
+			total += cc.getBranchCounter().getTotalCount();
+			total += cc.getLineCounter().getTotalCount();
+			total += cc.getMethodCounter().getTotalCount();
+			total += cc.getComplexityCounter().getTotalCount();
+
+			covered += cc.getInstructionCounter().getCoveredCount();
+			covered += cc.getBranchCounter().getCoveredCount();
+			covered += cc.getLineCounter().getCoveredCount();
+			covered += cc.getMethodCounter().getCoveredCount();
+			covered += cc.getComplexityCounter().getCoveredCount();
 		}
 
-		percentCovered = ((double)covered / (double)total) * 100.0;
+		double percentCovered = ((double)covered / (double)total) * 100.0;
 		return percentCovered;
 	}
 
@@ -140,36 +137,28 @@ class JacocoCoverageAnalyzer {
 	 */
 	public String generateDetailedCodeCoverageResults() {
 		StringBuilder executionResults = new StringBuilder();
-		try {
-			File executionDataFile = new File(this.jacocoOutputFilePath);
-			ExecFileLoader execFileLoader = new ExecFileLoader();
-			execFileLoader.load(executionDataFile);
 
-			final CoverageBuilder coverageBuilder = new CoverageBuilder();
-			final Analyzer analyzer = new Analyzer(
-					execFileLoader.getExecutionDataStore(), coverageBuilder);
-
-			analyzer.analyzeAll(new File(this.jarToTestPath));
-
-			for (final IClassCoverage cc : coverageBuilder.getClasses()) {
-				executionResults.append("Coverage of class " + cc.getName() + ":\n");
-				executionResults.append(getMetricResultString("instructions", cc.getInstructionCounter()));
-				executionResults.append(getMetricResultString("branches", cc.getBranchCounter()));
-				executionResults.append(getMetricResultString("lines", cc.getLineCounter()));
-				executionResults.append(getMetricResultString("methods", cc.getMethodCounter()));
-				executionResults.append(getMetricResultString("complexity", cc.getComplexityCounter()));
-
-				// adding this to a string is a little impractical with the size of some of the files,
-				// so we are commenting it out, but it shows that you can get the coverage status of each line
-				// if you wanted to add debug argument to display this level of detail at command line level....
-				/*
-				for (int i = cc.getFirstLine(); i <= cc.getLastLine(); i++) {
-					executionResults.append("Line " + Integer.valueOf(i) + ": " + getStatusString(cc.getLine(i).getStatus()) + "\n");
-				}
-				*/
+		for (final IClassCoverage cc : coverageBuilder.getClasses()) {
+			// ignore the TestBounds class within the jar
+			if (cc.getName().endsWith("TestBounds")) {
+				continue;
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
+
+			executionResults.append("Coverage of class " + cc.getName() + ":\n");
+			executionResults.append(getMetricResultString("instructions", cc.getInstructionCounter()));
+			executionResults.append(getMetricResultString("branches", cc.getBranchCounter()));
+			executionResults.append(getMetricResultString("lines", cc.getLineCounter()));
+			executionResults.append(getMetricResultString("methods", cc.getMethodCounter()));
+			executionResults.append(getMetricResultString("complexity", cc.getComplexityCounter()));
+
+			// adding this to a string is a little impractical with the size of some of the files,
+			// so we are commenting it out, but it shows that you can get the coverage status of each line
+			// if you wanted to add debug argument to display this level of detail at command line level....
+			/*
+			for (int i = cc.getFirstLine(); i <= cc.getLastLine(); i++) {
+				executionResults.append("Line " + Integer.valueOf(i) + ": " + getStatusString(cc.getLine(i).getStatus()) + "\n");
+			}
+			*/
 		}
 
 		return executionResults.toString();
