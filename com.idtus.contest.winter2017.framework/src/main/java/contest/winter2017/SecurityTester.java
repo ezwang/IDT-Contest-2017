@@ -44,7 +44,7 @@ public class SecurityTester {
 
 			// an enumeration parameter is one that has multiple options
 			if (potentialParameter.isEnumeration()) {
-				parameterString = potentialParameter.getEnumerationValues().get(0) + " "; // dumb logic - given a list of options, always use the first one
+				parameterString = potentialParameter.getEnumerationValues().get(0); // dumb logic - given a list of options, always use the first one
 
 				// if the parameter has internal format (eg. "<number>:<number>PM EST")
 				if(potentialParameter.isFormatted()) {
@@ -68,10 +68,10 @@ public class SecurityTester {
 				// if it is not an enumeration parameter, it is either an Integer, Double, or String
 			} else {
 				if (potentialParameter.getType() == Integer.class){ 
-					parameterString = Integer.toString(1) + " ";	// dumb logic - always use '1' for an Integer
+					parameterString = Integer.toString(1);	// dumb logic - always use '1' for an Integer
 					previousParameterStrings.add(parameterString);
 				} else if (potentialParameter.getType() == Double.class) {
-					parameterString = Double.toString(1.0) + " ";	// dumb logic - always use '1.0' for a Double
+					parameterString = Double.toString(1.0);	// dumb logic - always use '1.0' for a Double
 					previousParameterStrings.add(parameterString);
 				} else if (potentialParameter.getType() == String.class) {
 
@@ -93,7 +93,7 @@ public class SecurityTester {
 								potentialParameter.getFormattedParameter(formatVariableValues);
 					}
 					else {
-						parameterString = "one ";		// dumb logic - always use 'one' for a String
+						parameterString = "one";		// dumb logic - always use 'one' for a String
 					}
 
 					previousParameterStrings.add(parameterString);
