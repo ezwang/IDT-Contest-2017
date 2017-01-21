@@ -19,13 +19,39 @@ public class ProgramRunner {
 	private final String jarToTestPath;
 	private final String jacocoAgentJarPath;
 	private final String jacocoOutputFilePath;
+	private final int numThreads;
 	private final boolean printDebug;
 
 	public ProgramRunner(TesterOptions options) {
 		this.jarToTestPath = options.jarToTestPath;
 		this.jacocoAgentJarPath = options.jacocoAgentJarPath;
 		this.jacocoOutputFilePath = options.jacocoOutputFilePath;
+		this.numThreads = options.numThreads;
 		this.printDebug = options.verbose && !options.yamlOnly;
+	}
+
+	public List<Output> runTests(List<List<String>> testParametersList)
+			throws InterruptedException, ExecutionException {
+
+		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+
+		// iterate through the lists of tests and execute each one
+		List<TestCallable> callables = new ArrayList<>();
+		for (List<String> parameters : testParametersList) {
+			callables.add(new TestCallable(parameters));
+		}
+
+		// execute tests
+		List<Future<Output>> futures = executor.invokeAll(callables);
+
+		// collect results in list
+		List<Output> results = new ArrayList<Output>();
+		for (Future<Output> future : futures) {
+			results.add(future.get());
+		}
+
+		executor.shutdownNow();
+		return results;
 	}
 
 	/**
@@ -40,7 +66,7 @@ public class ProgramRunner {
 	 * 
 	 * @return Output representation of the standard out and standard error associated with the run
 	 */
-	public Output instrumentAndExecuteCode(Object[] parameters) {
+	public Output instrumentAndExecuteCode(List<String> parameters) {
 		// we are building up a command line statement that will use java -jar to execute the jar
 		// and uses jacoco to instrument that jar and collect code coverage metrics
 		List<String> command = new ArrayList<String>();
@@ -48,9 +74,7 @@ public class ProgramRunner {
 		command.add("-javaagent:" + jacocoAgentJarPath + "=destfile=" + jacocoOutputFilePath);
 		command.add("-jar");
 		command.add(this.jarToTestPath);
-		for (Object o : parameters) {
-			command.add(o.toString());
-		}
+		command.addAll(parameters);
 
 		// show the user the command to run and prepare the process using the command
 		if (printDebug) {
@@ -98,6 +122,19 @@ public class ProgramRunner {
 		@Override
 		public String call() throws IOException {
 			return IOUtils.toString(in, Charset.defaultCharset());
+		}
+	}
+
+	private class TestCallable implements Callable<Output> {
+		private final List<String> parameters;
+
+		public TestCallable(List<String> parameters) {
+			this.parameters = parameters;
+		}
+
+		@Override
+		public Output call() {
+			return instrumentAndExecuteCode(parameters);
 		}
 	}
 }

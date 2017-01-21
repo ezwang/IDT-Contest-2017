@@ -14,6 +14,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 
 import com.google.gson.JsonParseException;
 
@@ -157,7 +158,7 @@ public class Main {
 			}
 
 			// execute tests
-			tester.executeBasicTests(testerOptions.numThreads);
+			tester.executeBasicTests();
 			tester.executeSecurityTests();
 			tester.printYaml();
 		}
@@ -205,9 +206,8 @@ public class Main {
 		// determine jacocoOutputFilePath
 		options.jacocoOutputFilePath = Paths.get(
 				options.jacocoOutputDirPath,
-				jarToTestFile.getName().replaceAll("\\.", "_"),
-				JACOCO_OUTPUT_FILE_SUFFIX
-				).toString();
+				FilenameUtils.removeExtension(jarToTestFile.getName()) + JACOCO_OUTPUT_FILE_SUFFIX
+			).toString();
 
 		File jacocoOutputFile = new File(options.jacocoOutputFilePath);
 		if (jacocoOutputFile != null && jacocoOutputFile.exists()) {

@@ -20,11 +20,16 @@ import contest.winter2017.Tester.TesterOptions;
 
 class JacocoCoverageAnalyzer {
 	private final String jacocoOutputFilePath;
-	private final CoverageBuilder coverageBuilder;
+	private final String jarToTestPath;
+
+	private CoverageBuilder coverageBuilder = null;
 
 	public JacocoCoverageAnalyzer(TesterOptions options) throws IOException {
 		this.jacocoOutputFilePath = options.jacocoOutputFilePath;
+		this.jarToTestPath = options.jarToTestPath;
+	}
 
+	private void loadCoverage() throws IOException {
 		// creating a new file for output in the jacoco output directory (one of the application arguments)
 		File executionDataFile = new File(this.jacocoOutputFilePath);
 		ExecFileLoader execFileLoader = new ExecFileLoader();
@@ -36,7 +41,7 @@ class JacocoCoverageAnalyzer {
 				execFileLoader.getExecutionDataStore(), coverageBuilder);
 
 		// analyzeAll is the way to go to analyze all classes inside a container (jar or zip or directory)
-		File jarToTest = new File(options.jarToTestPath);
+		File jarToTest = new File(jarToTestPath);
 		analyzer.analyzeAll(jarToTest);
 	}
 
@@ -103,6 +108,13 @@ class JacocoCoverageAnalyzer {
 	 * @return double representation of the percentage of code covered during testing
 	 */
 	public double generateSummaryCodeCoverageResults() {
+		try {
+			loadCoverage();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return 0.0;
+		}
+
 		long total = 0;
 		long covered = 0;
 
@@ -136,6 +148,13 @@ class JacocoCoverageAnalyzer {
 	 * @return String representing code coverage results
 	 */
 	public String generateDetailedCodeCoverageResults() {
+		try {
+			loadCoverage();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+
 		StringBuilder executionResults = new StringBuilder();
 
 		for (final IClassCoverage cc : coverageBuilder.getClasses()) {
