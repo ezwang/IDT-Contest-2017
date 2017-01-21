@@ -2,12 +2,11 @@ package contest.winter2017;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class FixedParameterFactory extends ParameterFactory {
-	private List<Object> fixedParameterList;
+	private List<Parameter> fixedParameterList;
 
-	public FixedParameterFactory(List<Object> fixedParameterList) {
+	public FixedParameterFactory(List<Parameter> fixedParameterList) {
 		this.fixedParameterList = fixedParameterList;
 	}
 
@@ -16,14 +15,13 @@ public class FixedParameterFactory extends ParameterFactory {
 		return true;
 	}
 
-	@SuppressWarnings("rawtypes")
 	@Override
 	public List<Parameter> getNext(List<String> previousParameterValues) {
 		List<Parameter> possibleParamsList = new ArrayList<Parameter>();
 
 		if (previousParameterValues.size() < fixedParameterList.size()) {
-			Map paramMap = (Map) fixedParameterList.get(previousParameterValues.size());
-			possibleParamsList.add(new Parameter(paramMap));
+			Parameter param = fixedParameterList.get(previousParameterValues.size());
+			possibleParamsList.add(param);
 		}
 		return possibleParamsList;
 	}

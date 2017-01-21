@@ -59,7 +59,7 @@ public class TestBoundsParser {
 	 * Create a TestBoundsParser from a map.
 	 * @param map
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public TestBoundsParser(Map<String, Object> map) {
 		originalMap = map;
 
@@ -72,11 +72,13 @@ public class TestBoundsParser {
 
 		// fill in parameterFactory
 		if (map.containsKey(FIXED_PARAMETER_KEY)) {
-			List<Object> paramList = (List<Object>) map.get(FIXED_PARAMETER_KEY);
+			List<Map> rawList = (List<Map>) map.get(FIXED_PARAMETER_KEY);
+			List<Parameter> paramList = parseRawParamList(rawList);
 			parameterFactory = new FixedParameterFactory(paramList);
 		}
 		else if (map.containsKey(DEPENDENT_PARAMETER_KEY)) {
-			Map<String, Object> paramMap = (Map<String, Object>) map.get(DEPENDENT_PARAMETER_KEY);
+			Map<String, Object> rawMap = (Map<String, Object>) map.get(DEPENDENT_PARAMETER_KEY);
+			Map<String, List<Parameter>> paramMap = parseRawParamMap(rawMap);
 			parameterFactory = new DependentParameterFactory(paramMap);
 		}
 	}
@@ -151,5 +153,34 @@ public class TestBoundsParser {
 		JsonWriter writer = gson.newJsonWriter(new FileWriter(testFile));
 		gson.toJson(this.originalMap, STRING_OBJECT_MAP, writer);
 		writer.close();
+	}
+
+
+	@SuppressWarnings("rawtypes")
+	private static List<Parameter> parseRawParamList(List<Map> rawList) {
+		List<Parameter> outList = new ArrayList<>();
+		for (Map map : rawList) {
+			outList.add(new Parameter(map));
+		}
+		return outList;
+	}
+
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private static Map<String, List<Parameter>> parseRawParamMap(Map<String, Object> rawMap) {
+		Map<String, List<Parameter>> outMap = new HashMap<>();
+		for (String key : rawMap.keySet()) {
+			Object obj = rawMap.get(key);
+			List<Parameter> parameters = new ArrayList<>();
+			if (obj instanceof Map) {
+				parameters.add(new Parameter((Map) obj));
+			} else {
+				for (Map paramMap : (List<Map>) obj) {
+					parameters.add(new Parameter(paramMap));
+				}
+			}
+			outMap.put(key, parameters);
+		}
+		return outMap;
 	}
 }

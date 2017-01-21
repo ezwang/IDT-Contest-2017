@@ -6,9 +6,9 @@ import java.util.Map;
 
 public class DependentParameterFactory extends ParameterFactory {
 	// key: regex, value: parameter
-	private Map<String, Object> dependentParametersMap;
+	private Map<String, List<Parameter>> dependentParametersMap;
 
-	public DependentParameterFactory(Map<String, Object> dependentParametersMap) {
+	public DependentParameterFactory(Map<String, List<Parameter>> dependentParametersMap) {
 		this.dependentParametersMap = dependentParametersMap;
 	}
 
@@ -17,24 +17,17 @@ public class DependentParameterFactory extends ParameterFactory {
 		return false;
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public List<Parameter> getNext(List<String> previousParameterValues) {
 		String currentParamsString = getCurrentParamsString(previousParameterValues);
 		List<Parameter> possibleParamsList = new ArrayList<Parameter>();
 
-		for (Map.Entry<String, Object> mapEntry : dependentParametersMap.entrySet()) {
-			String regex = mapEntry.getKey();
-			Object obj = mapEntry.getValue();
-
-			if (currentParamsString.matches(regex)|| (regex.isEmpty() && currentParamsString.isEmpty())) {
-				if (obj instanceof Map) {
-					possibleParamsList.add(new Parameter((Map) obj));
-				} else {
-					for (Map paramMap : (List<Map>) obj) {
-						possibleParamsList.add(new Parameter(paramMap));
-					}
-				}
+		for (String regex : dependentParametersMap.keySet()) {
+			List<Parameter> obj = dependentParametersMap.get(regex);
+			boolean matches = currentParamsString.matches(regex) ||
+					regex.isEmpty() && currentParamsString.isEmpty();
+			if (matches) {
+				possibleParamsList.addAll(obj);
 			}
 		}
 		return possibleParamsList;
