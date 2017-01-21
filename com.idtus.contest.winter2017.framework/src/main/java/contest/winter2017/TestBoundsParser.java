@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.Attributes;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -157,7 +158,15 @@ public class TestBoundsParser {
 	 * @param testFile The JSON file to write to
 	 * @throws IOException
 	 */
+	@SuppressWarnings("unchecked")
 	public void writeJson(File testFile) throws IOException {
+		// convert all arguments into strings
+		List<HashMap<String, Object>> tests = (List<HashMap<String, Object>>)this.originalMap.get("tests");
+		for (HashMap<String, Object> test : tests) {
+			test.put("parameters", ((List<Object>)test.get("parameters")).stream().map((v) -> v.toString()).collect(Collectors.toList()));
+		}
+		this.originalMap.put("tests", tests);
+
 		JsonWriter writer = gson.newJsonWriter(new FileWriter(testFile));
 		gson.toJson(this.originalMap, STRING_OBJECT_MAP, writer);
 		writer.close();
