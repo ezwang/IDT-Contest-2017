@@ -74,7 +74,17 @@ public class ProgramRunner {
 		command.add("-javaagent:" + jacocoAgentJarPath + "=destfile=" + jacocoOutputFilePath);
 		command.add("-jar");
 		command.add(this.jarToTestPath);
-		command.addAll(parameters);
+		
+		for (String param : parameters) {
+			// if the argument is surrounded by quotes, remove the quotes
+			// this is because the quotes were originally needed to escape arguments in the shell
+			if (param.matches("^\".+\"$")) {
+				command.add(param.substring(1, param.length()-1));
+			}
+			else {
+				command.add(param);
+			}
+		}
 
 		// show the user the command to run and prepare the process using the command
 		if (printDebug) {
