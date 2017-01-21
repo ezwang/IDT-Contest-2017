@@ -25,7 +25,7 @@ public class DependentParameterFactory extends ParameterFactory {
 
 		for (String regex : dependentParametersMap.keySet()) {
 			List<Parameter> obj = dependentParametersMap.get(regex);
-			boolean matches = currentParamsString.matches(Pattern.quote(regex)) ||
+			boolean matches = currentParamsString.matches(regex) ||
 					regex.isEmpty() && currentParamsString.isEmpty();
 			if (matches) {
 				possibleParamsList.addAll(obj);

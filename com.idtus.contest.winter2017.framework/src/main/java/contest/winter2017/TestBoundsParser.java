@@ -213,8 +213,8 @@ public class TestBoundsParser {
 				// pass
 			}
 		}
-		else if (type instanceof Class) {
-			type = (Class) type;
+		else if (typeObj instanceof Class) {
+			type = (Class) typeObj;
 		}
 
 
