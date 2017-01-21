@@ -72,12 +72,8 @@ public class TestBoundsParser {
 		originalMap = map;
 
 		// fill in tests
-		tests = new ArrayList<Test>();
-		List<Map<String, Object>> testList =
-				(List<Map<String, Object>>) map.get("tests");
-		for (Map<String, Object> inTest : testList) {
-			tests.add(new Test(inTest));
-		}
+		List<Map<String, Object>> rawTestList =	(List<Map<String, Object>>) map.get("tests");
+		tests = parseRawTestList(rawTestList);
 
 		// fill in parameterFactory
 		if (map.containsKey(FIXED_PARAMETER_KEY)) {
@@ -167,6 +163,18 @@ public class TestBoundsParser {
 	}
 
 
+	@SuppressWarnings("unchecked")
+	private static List<Test> parseRawTestList(List<Map<String, Object>> rawList) {
+		List<Test> testList = new ArrayList<>();
+		for (Map<String, Object> inputMap : rawList) {
+			List<Object> parameters = (List<Object>) inputMap.get("parameters");
+			String stdOutExpectedResultRegex = (String) inputMap.get("stdOutExpectedResultRegex");
+			String stdErrExpectedResultRegex = (String) inputMap.get("stdErrExpectedResultRegex");
+			testList.add(new Test(parameters, stdOutExpectedResultRegex, stdErrExpectedResultRegex));
+		}
+		return testList;
+	}
+
 	private static List<Parameter> parseRawParamList(List<Map<String, Object>> rawList) {
 		List<Parameter> outList = new ArrayList<>();
 		for (Map<String, Object> map : rawList) {
@@ -185,7 +193,7 @@ public class TestBoundsParser {
 			if (obj instanceof Map) {
 				parameters.add(parseRawParam((Map<String, Object>) obj));
 			}
-			else {
+			else if (obj instanceof List) {
 				for (Map<String, Object> paramMap : (List<Map<String, Object>>) obj) {
 					parameters.add(parseRawParam(paramMap));
 				}

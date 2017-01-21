@@ -1,7 +1,6 @@
 package contest.winter2017;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Class that represents a basic test that is extracted from the executable jar and then run against the executable jar
@@ -26,17 +25,17 @@ public class Test {
 	 * The regex string that describes the expected std err result for the test
 	 */
 	private String stdErrExpectedResultRegex;
-	
+
 
 	/**
 	 * Ctr for Test object
-	 * @param inputMap
 	 */
-	@SuppressWarnings("unchecked")
-	public Test(Map<String, Object> inputMap) {
-		this.parameters = (List<Object>) inputMap.get("parameters");
-		this.stdOutExpectedResultRegex = (String) inputMap.get("stdOutExpectedResultRegex");
-		this.stdErrExpectedResultRegex = (String) inputMap.get("stdErrExpectedResultRegex");
+	public Test(List<Object> parameters,
+			String stdOutExpectedResultRegex,
+			String stdErrExpectedResultRegex) {
+		this.parameters = parameters;
+		this.stdOutExpectedResultRegex = stdOutExpectedResultRegex;
+		this.stdErrExpectedResultRegex = stdErrExpectedResultRegex;
 	}
 
 
