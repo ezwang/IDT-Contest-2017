@@ -87,12 +87,18 @@ public class BasicTester {
 		result.parameters = test.getParameters().toString();
 		result.output = output;
 
-		String pOut = output.getStdOutString().trim();
-		String pErr = output.getStdErrString().trim();
+		String pOut = output.getStdOutString().replaceAll("[\\r\\n]", "");
+		String pErr = output.getStdErrString().replaceAll("[\\r\\n]", "");
+
+		// NOTE: We also need to check with newlines removed for backwards compatibility.
+		String pOutAlt = pOut.replaceAll("[\\r\\n]", "");
+		String pErrAlt = pErr.replaceAll("[\\r\\n]", "");
 
 		// determine the result of the test based on expected output/error regex
-		boolean passedOut = pOut.matches(test.getStdOutExpectedResultRegex());
-		boolean passedErr = pErr.matches(test.getStdErrExpectedResultRegex());
+		boolean passedOut = pOut.matches(test.getStdOutExpectedResultRegex()) ||
+				pOutAlt.matches(test.getStdErrExpectedResultRegex());
+		boolean passedErr = pErr.matches(test.getStdErrExpectedResultRegex()) ||
+				pErrAlt.matches(test.getStdErrExpectedResultRegex());
 		result.passed = passedOut && passedErr;
 
 		StringBuilder errorString = new StringBuilder();
