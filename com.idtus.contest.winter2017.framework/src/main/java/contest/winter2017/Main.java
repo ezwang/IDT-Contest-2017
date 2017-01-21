@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -14,6 +15,10 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
 
+import com.google.gson.JsonParseException;
+
+import contest.winter2017.Tester.TesterOptions;
+
 
 /**
  * Entry-point class for the black-box testing framework 
@@ -22,6 +27,11 @@ import org.apache.commons.io.FileUtils;
  */
 public class Main {
 	private static final String JACOCO_AGENT_FILENAME = "agent.jar";
+
+	/**
+	 * suffix for all jacoco output files
+	 */
+	private static final String JACOCO_OUTPUT_FILE_SUFFIX = "_jacoco.exec";
 
 	/**
 	 * cli key for path to the executable black-box jar to test
@@ -80,21 +90,6 @@ public class Main {
 	 */
 	public static final String BASIC_TEST_THREADS = "basicThreads";
 
-	/**
-	 * A class used to aid parsing options from the command line.
-	 * TODO: Replace this with something better.
-	 */
-	public static class TesterOptions {
-		public String jarToTestPath;
-		public String jacocoOutputDirPath;
-		public String jacocoAgentJarPath;
-		public String testFilePath;
-		public int numThreads;
-		public boolean disableJsonConversion;
-		public boolean yamlOnly;
-		public boolean verbose;
-	}
-
 	private static final Option[] CLI_OPTION_LIST = new Option[] {
 			// paths
 			Option.builder(JAR_TO_TEST_PATH).hasArg(true).required(true)
@@ -152,12 +147,19 @@ public class Main {
 			}
 
 			Tester tester = new Tester();
-			boolean success = tester.init(testerOptions);
-			if (success) {
-				tester.executeBasicTests(testerOptions.numThreads);
-				tester.executeSecurityTests();
-				tester.printYaml();
+			try {
+				tester.init(testerOptions);
 			}
+			catch (IOException | ReflectiveOperationException | JsonParseException e) {
+				System.out.println("ERROR: An exception occurred during initialization.");
+				e.printStackTrace();
+				return;
+			}
+
+			// execute tests
+			tester.executeBasicTests(testerOptions.numThreads);
+			tester.executeSecurityTests();
+			tester.printYaml();
 		}
 
 		// if the user has requested help
@@ -191,13 +193,25 @@ public class Main {
 		// get testFilePath
 		File jarToTestFile = new File(options.jarToTestPath);
 		File testFile = new File(jarToTestFile.getParent(), jarToTestFile.getName().replaceFirst("[.][^.]+$", "") + ".json");
-		options.testFilePath = testFile.getAbsolutePath();
+		options.jsonFilePath = testFile.getAbsolutePath();
 
 		// get jacocoOutputDirPath
 		if (cliArgs.hasOption(JACOCO_OUTPUT_PATH)) {
 			options.jacocoOutputDirPath = cliArgs.getOptionValue(JACOCO_OUTPUT_PATH);
 		} else {
 			options.jacocoOutputDirPath = createTempDir().getAbsolutePath();
+		}
+
+		// determine jacocoOutputFilePath
+		options.jacocoOutputFilePath = Paths.get(
+				options.jacocoOutputDirPath,
+				jarToTestFile.getName().replaceAll("\\.", "_"),
+				JACOCO_OUTPUT_FILE_SUFFIX
+				).toString();
+
+		File jacocoOutputFile = new File(options.jacocoOutputFilePath);
+		if (jacocoOutputFile != null && jacocoOutputFile.exists()) {
+			jacocoOutputFile.delete();
 		}
 
 		// get jacocoAgentJarPath

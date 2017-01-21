@@ -3,22 +3,22 @@ package contest.winter2017;
 import java.util.concurrent.Callable;
 
 class BasicTestRunner implements Callable<BasicTestResult> {
-	private final Tester tester;
+	private final ProgramRunner programRunner;
 	private final Test test;
 
-	public BasicTestRunner(Tester tester, Test test) {
-		this.tester = tester;
+	public BasicTestRunner(ProgramRunner programRunner, Test test) {
+		this.programRunner = programRunner;
 		this.test = test;
 	}
 
 	@Override
 	public BasicTestResult call() {
 		// instrument the code to code coverage metrics, execute the test with given parameters, then show the output
-		Output output = this.tester.instrumentAndExecuteCode(test.getParameters().toArray());
-		this.tester.printBasicTestOutput(output);
+		Output output = programRunner.instrumentAndExecuteCode(test.getParameters().toArray());
 
 		BasicTestResult result = new BasicTestResult();
 		result.parameters = test.getParameters().toString();
+		result.output = output;
 
 		String pOut = output.getStdOutString().trim();
 		String pErr = output.getStdErrString().trim();

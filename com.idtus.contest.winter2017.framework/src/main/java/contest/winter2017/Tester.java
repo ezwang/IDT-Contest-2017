@@ -1,38 +1,18 @@
 package contest.winter2017;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.io.IOUtils;
-import org.jacoco.core.analysis.Analyzer;
-import org.jacoco.core.analysis.CoverageBuilder;
-import org.jacoco.core.analysis.IClassCoverage;
-import org.jacoco.core.analysis.ICounter;
-import org.jacoco.core.data.ExecutionData;
-import org.jacoco.core.data.ExecutionDataReader;
-import org.jacoco.core.data.IExecutionDataVisitor;
-import org.jacoco.core.data.ISessionInfoVisitor;
-import org.jacoco.core.data.SessionInfo;
-import org.jacoco.core.tools.ExecFileLoader;
-
 import com.google.gson.JsonParseException;
-
-import contest.winter2017.Main.TesterOptions;
 
 /**
  * Class that will handle execution of basic tests and exploratory security test on a black-box executable jar.  
@@ -44,34 +24,42 @@ import contest.winter2017.Main.TesterOptions;
 public class Tester {
 
 	/**
-	 * suffix for all jacoco output files
-	 */
-	private static final String JACOCO_OUTPUT_FILE_SUFFIX = "_jacoco.exec";
-
-	/**
 	 * horizontal line shown between test output
 	 */
 	private static final String HORIZONTAL_LINE = "-------------------------------------------------------------------------------------------";
 
 	/**
-	 * path of the jar to test as a String
+	 * A class to store options for testing.
+	 * Used to aid in parsing options from the command line.
 	 */
-	private String jarToTestPath = null;
+	public static class TesterOptions {
+		/** path of the jar to test */
+		public String jarToTestPath;
 
-	/**
-	 * path of the directory for jacoco output as a String
-	 */
-	private String jacocoOutputDirPath = null;
+		/** path of the jacoco agent jar */
+		public String jacocoAgentJarPath;
 
-	/**
-	 * path to the jacoco agent library as a String
-	 */
-	private String jacocoAgentJarPath = null;
+		/** path of the directory that jacoco will use for output */
+		public String jacocoOutputDirPath;
 
-	/**
-	 * path to the file for jacoco output as a String
-	 */
-	private String jacocoOutputFilePath = null;
+		/** path of the jacoco output file */
+		public String jacocoOutputFilePath;
+
+		/** path to the json file to load or save test bounds */
+		public String jsonFilePath;
+
+		/** number of threads to use */
+		public int numThreads;
+
+		/** disable use of json files */
+		public boolean disableJsonConversion;
+
+		/** only output yaml */
+		public boolean yamlOnly;
+
+		/** enable verbose output */
+		public boolean verbose;
+	}
 
 	/**
 	 * basic tests that have been extracted from the jar under test
@@ -82,6 +70,9 @@ public class Tester {
 	 * parameter factory that can be used to help figure out parameter signatures from the blackbox jars
 	 */
 	private ParameterFactory parameterFactory = null;
+
+	private ProgramRunner programRunner;
+	private JacocoCoverageAnalyzer coverage;
 
 	private boolean optionYamlOnly;
 	private boolean optionVerbose;
@@ -97,61 +88,42 @@ public class Tester {
 	/**
 	 * Method that will initialize the Framework by loading up the jar to test, and then extracting
 	 * parameters, parameter bounds (if any), and basic tests from the jar.
-	 * 
-	 * @param initJarToTestPath - String representing path of the jar to test
-	 * @param initJacocoOutputDirPath - String representing path of the directory jacoco will use for output
-	 * @param initJacocoAgentJarPath - String representing path of the jacoco agent jar
-	 * @param testFile - String representing path of file to save the JSON tests
-	 * @return boolean - false if initialization encounters an Exception, true if it does not
 	 */
-	public boolean init(TesterOptions options) {
-		this.jarToTestPath = options.jarToTestPath;
-		this.jacocoOutputDirPath = options.jacocoOutputDirPath;
-		this.jacocoAgentJarPath = options.jacocoAgentJarPath;
+	public void init(TesterOptions options)
+			throws IOException, ReflectiveOperationException, JsonParseException {
 
 		this.optionYamlOnly = options.yamlOnly;
 		this.optionVerbose = options.verbose;
 
-		File jarFileToTest = new File(this.jarToTestPath);
-		this.jacocoOutputFilePath = Paths.get(this.jacocoOutputDirPath, jarFileToTest.getName().replaceAll("\\.", "_"), JACOCO_OUTPUT_FILE_SUFFIX).toString();
+		this.programRunner = new ProgramRunner(options);
+		this.coverage = new JacocoCoverageAnalyzer(options);
 
-		File jacocoOutputFile = new File(this.jacocoOutputFilePath);
-		if (jacocoOutputFile != null && jacocoOutputFile.exists()) {
-			jacocoOutputFile.delete();
-		}
-
+		// parse TestBounds file
 		TestBoundsParser testBoundsParser;
-		try {
-			File testFile = new File(options.testFilePath);
-			if (!options.disableJsonConversion && testFile.exists()) {
-				// test cases are already converted to json, load them
-				testBoundsParser = TestBoundsParser.fromJson(testFile);
-			}
-			else {
-				// instantiating a new Parameter Factory using the Test Bounds map
-				testBoundsParser = TestBoundsParser.fromJar(jarFileToTest);
-				if (!options.disableJsonConversion) {
-					testBoundsParser.writeJson(testFile);
-				}
-			}
+		File testFile = new File(options.jsonFilePath);
+		if (!options.disableJsonConversion && testFile.exists()) {
+			// test cases are already converted to json, load them
+			testBoundsParser = TestBoundsParser.fromJson(testFile);
 		}
-		catch (IOException | ReflectiveOperationException | JsonParseException e) {
-			System.out.println("ERROR: An exception occurred during initialization.");
-			e.printStackTrace();
-			return false;
+		else {
+			// instantiating a new Parameter Factory using the Test Bounds map
+			File jarFileToTest = new File(options.jarToTestPath);
+			testBoundsParser = TestBoundsParser.fromJar(jarFileToTest);
+			if (!options.disableJsonConversion) {
+				testBoundsParser.writeJson(testFile);
+			}
 		}
 
 		this.parameterFactory = testBoundsParser.getParameterFactory();
 		this.tests = testBoundsParser.getTests();
-
-		return true;
 	}
+
 
 	public void printYaml() {
 		System.out.println("Total predefined tests run: " + (this.yaml_test_pass + this.yaml_test_fail));
 		System.out.println("Number of predefined tests that passed: " + this.yaml_test_pass);
 		System.out.println("Number of predefined tests that failed: " + this.yaml_test_fail);
-		System.out.println("Total code coverage percentage: " + this.generateSummaryCodeCoverageResults());
+		System.out.println("Total code coverage percentage: " + coverage.generateSummaryCodeCoverageResults());
 		System.out.println("Unique error count: " + this.yaml_errors.size());
 		if (this.yaml_errors.size() > 0) {
 			System.out.println("Errors seen:");
@@ -190,7 +162,7 @@ public class Tester {
 
 		// iterate through the lists of tests and execute each one
 		for (Test test : this.tests) {
-			results.add(executor.submit(new BasicTestRunner(this, test)));
+			results.add(executor.submit(new BasicTestRunner(programRunner, test)));
 		}
 
 		executor.shutdown();
@@ -210,6 +182,8 @@ public class Tester {
 				continue;
 			}
 
+			printBasicTestOutput(result.output);
+
 			if (result.passed) {
 				passCount++;
 			}
@@ -225,7 +199,7 @@ public class Tester {
 		}
 
 		// print the basic test results and the code coverage associated with the basic tests
-		double percentCovered = generateSummaryCodeCoverageResults();
+		double percentCovered = coverage.generateSummaryCodeCoverageResults();
 
 		if (!optionYamlOnly) {
 			System.out.printf("basic test results: %d total, %d pass, %d fail, %.2f percent covered%n",
@@ -333,7 +307,7 @@ public class Tester {
 
 		// This example demonstrates how to execute the black-box jar with concrete parameters
 		// and how to access (print to screen) the standard output and error from the run
-		Output output = instrumentAndExecuteCode(parameters);
+		Output output = programRunner.instrumentAndExecuteCode(parameters);
 		printBasicTestOutput(output); 
 
 		if (!output.getStdErrString().isEmpty()) {
@@ -344,7 +318,9 @@ public class Tester {
 		// We do not intend for this example code to be part of your output. We are only
 		// including the example to show you how you might tap into the code coverage
 		// results that we are generating with jacoco
-		showCodeCoverageResultsExample();
+		if (!optionYamlOnly) {
+			coverage.showCodeCoverageResultsExample();
+		}
 
 		/////////// END EXAMPLE CODE ////////////// 
 
@@ -355,66 +331,6 @@ public class Tester {
 	// PRIVATE METHODS
 	//////////////////////////////////////////
 
-	/**
-	 * This method will instrument and execute the jar under test with the supplied parameters.
-	 * This method should be used for both basic tests and security tests.
-	 * 
-	 * An assumption is made in this method that the word java is recognized on the command line
-	 * because the user has already set the appropriate environment variable path. 
-	 * 
-	 * @param parameters - array of Objects that represents the parameter values to use for this 
-	 *                     execution of the jar under test
-	 *                     
-	 * @return Output representation of the standard out and standard error associated with the run
-	 */
-	Output instrumentAndExecuteCode(Object[] parameters) {
-		// we are building up a command line statement that will use java -jar to execute the jar
-		// and uses jacoco to instrument that jar and collect code coverage metrics
-		List<String> command = new ArrayList<String>();
-		command.add("java");
-		command.add("-javaagent:" + this.jacocoAgentJarPath + "=destfile=" + this.jacocoOutputFilePath);
-		command.add("-jar");
-		command.add(this.jarToTestPath);
-		for (Object o : parameters) {
-			command.add(o.toString());
-		}
-
-		// show the user the command to run and prepare the process using the command
-		if (optionVerbose && !optionYamlOnly) {
-			System.out.println("command to run: " + command);
-		}
-
-		ProcessBuilder pb = new ProcessBuilder(command);
-		String stdOutString;
-		String stdErrString;
-
-		// read stdout and stderr in separate threads to avoid blocking
-		ExecutorService executor = Executors.newFixedThreadPool(2);
-		try {
-			Process process = pb.start();
-			InputStream isOut = process.getInputStream();
-			InputStream isErr = process.getErrorStream();
-
-			// add tasks to executor
-			Future<String> futureOut = executor.submit(new InputStringCollector(isOut));
-			Future<String> futureErr = executor.submit(new InputStringCollector(isErr));
-
-			// await completion
-			process.waitFor();
-			stdOutString = futureOut.get();
-			stdErrString = futureErr.get();
-			executor.shutdownNow();
-		}
-		catch (IOException | ExecutionException | InterruptedException e) {
-			System.out.println("ERROR: IOException has prevented execution of the command: " + command); 
-			return null;
-		}
-
-		// we now have the output as an object from the run of the black-box jar
-		// this output object contains both the standard output and the standard error
-		return new Output(stdOutString, stdErrString);
-	}
-
 
 	/**
 	 * Method used to print the basic test output (std out/err)
@@ -424,233 +340,6 @@ public class Tester {
 		if (!optionYamlOnly && optionVerbose) {
 			System.out.println("stdout of execution: " + output.getStdOutString());
 			System.out.println("stderr of execution: " + output.getStdErrString());
-		}
-	}
-
-
-	/**
-	 * Method used to print raw code coverage stats including hits/probes
-	 * @throws IOException
-	 */
-	private void printRawCoverageStats()  {
-		if (optionYamlOnly) {
-			return;
-		}
-
-		System.out.printf("exec file: %s%n", this.jacocoOutputFilePath);
-		System.out.println("CLASS ID         HITS/PROBES   CLASS NAME");
-
-		try {
-			File executionDataFile = new File(this.jacocoOutputFilePath);
-			final FileInputStream in = new FileInputStream(executionDataFile);
-			final ExecutionDataReader reader = new ExecutionDataReader(in);
-			reader.setSessionInfoVisitor(new ISessionInfoVisitor() {
-				public void visitSessionInfo(final SessionInfo info) {
-					System.out.printf("Session \"%s\": %s - %s%n",
-							info.getId(),
-							new Date(info.getStartTimeStamp()),
-							new Date(info.getDumpTimeStamp()));
-				}
-			});
-			reader.setExecutionDataVisitor(new IExecutionDataVisitor() {
-				public void visitClassExecution(final ExecutionData data) {
-					System.out.printf("%016x  %3d of %3d   %s%n",
-							Long.valueOf(data.getId()),
-							Integer.valueOf(getHitCount(data.getProbes())),
-							Integer.valueOf(data.getProbes().length),
-							data.getName());
-				}
-			});
-			reader.read();
-			in.close();
-		} catch (IOException e) {
-			System.out.println("Unable to display raw coverage stats due to IOException related to " + this.jacocoOutputFilePath);
-		}
-		System.out.println();
-	}
-
-
-	/**
-	 * Method used to get hit count from the code coverage metrics
-	 * @param data - boolean array of coverage data where true indicates hits
-	 * @return int representation of count of total hits from supplied data
-	 */
-	private int getHitCount(final boolean[] data) {
-		int count = 0;
-		for (final boolean hit : data) {
-			if (hit) {
-				count++;
-			}
-		}
-		return count;
-	}
-
-
-	/**
-	 * Method for generating code coverage metrics including instructions, branches, lines, 
-	 * methods and complexity. 
-	 * 
-	 * @return double representation of the percentage of code covered during testing
-	 */
-	private double generateSummaryCodeCoverageResults() {
-		double percentCovered = 0.0;
-		long total = 0;
-		long covered = 0;
-		try {
-			// creating a new file for output in the jacoco output directory (one of the application arguments)
-			File executionDataFile = new File(this.jacocoOutputFilePath);
-			ExecFileLoader execFileLoader = new ExecFileLoader();
-			execFileLoader.load(executionDataFile);
-
-			// use CoverageBuilder and Analyzer to assess code coverage from jacoco output file
-			final CoverageBuilder coverageBuilder = new CoverageBuilder();
-			final Analyzer analyzer = new Analyzer(
-					execFileLoader.getExecutionDataStore(), coverageBuilder);
-
-			// analyzeAll is the way to go to analyze all classes inside a container (jar or zip or directory)
-			analyzer.analyzeAll(new File(this.jarToTestPath));
-
-
-			for (final IClassCoverage cc : coverageBuilder.getClasses()) {
-
-				// report code coverage from all classes that are not the TestBounds class within the jar
-				if(cc.getName().endsWith("TestBounds") == false) {
-					total += cc.getInstructionCounter().getTotalCount();
-					total += cc.getBranchCounter().getTotalCount();
-					total += cc.getLineCounter().getTotalCount();
-					total += cc.getMethodCounter().getTotalCount();
-					total += cc.getComplexityCounter().getTotalCount();
-
-					covered += cc.getInstructionCounter().getCoveredCount();
-					covered += cc.getBranchCounter().getCoveredCount();
-					covered += cc.getLineCounter().getCoveredCount();
-					covered += cc.getMethodCounter().getCoveredCount();
-					covered += cc.getComplexityCounter().getCoveredCount();
-				}
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		percentCovered = ((double)covered / (double)total) * 100.0;
-		return percentCovered;
-	}
-
-
-	/**
-	 * This method shows an example of how to generate code coverage metrics from Jacoco
-	 * 
-	 * @return String representing code coverage results
-	 */
-	private String generateDetailedCodeCoverageResults() {
-		StringBuilder executionResults = new StringBuilder();
-		try {
-			File executionDataFile = new File(this.jacocoOutputFilePath);
-			ExecFileLoader execFileLoader = new ExecFileLoader();
-			execFileLoader.load(executionDataFile);
-
-			final CoverageBuilder coverageBuilder = new CoverageBuilder();
-			final Analyzer analyzer = new Analyzer(
-					execFileLoader.getExecutionDataStore(), coverageBuilder);
-
-			analyzer.analyzeAll(new File(this.jarToTestPath));
-
-			for (final IClassCoverage cc : coverageBuilder.getClasses()) {
-				executionResults.append("Coverage of class " + cc.getName() + ":\n");
-				executionResults.append(getMetricResultString("instructions", cc.getInstructionCounter()));
-				executionResults.append(getMetricResultString("branches", cc.getBranchCounter()));
-				executionResults.append(getMetricResultString("lines", cc.getLineCounter()));
-				executionResults.append(getMetricResultString("methods", cc.getMethodCounter()));
-				executionResults.append(getMetricResultString("complexity", cc.getComplexityCounter()));
-
-				// adding this to a string is a little impractical with the size of some of the files, 
-				// so we are commenting it out, but it shows that you can get the coverage status of each line
-				// if you wanted to add debug argument to display this level of detail at command line level.... 
-				/*
-				for (int i = cc.getFirstLine(); i <= cc.getLastLine(); i++) {
-					executionResults.append("Line " + Integer.valueOf(i) + ": " + getStatusString(cc.getLine(i).getStatus()) + "\n");
-				}
-				*/
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return executionResults.toString();
-	}
-
-
-	/**
-	 * Method to translate the Jacoco line coverage status integers to Strings.
-	 * 
-	 * @param status - integer representation of line coverage status provided by Jacoco
-	 * @return String representation of line coverage status (not covered, partially covered, fully covered)
-	 */
-	@SuppressWarnings("unused")
-	private String getStatusString(final int status) {
-		switch (status) {
-		case ICounter.NOT_COVERED:
-			return "not covered";
-		case ICounter.PARTLY_COVERED:
-			return "partially covered";
-		case ICounter.FULLY_COVERED:
-			return "fully covered";
-		}
-		return "";
-	}
-
-
-	/**
-	 * Method to translate the counter data and units into a human readable metric result String
-	 * 
-	 * @param unit
-	 * @param counter
-	 * @return
-	 */
-	private String getMetricResultString(final String unit, final ICounter counter) {
-		return String.format("%d of %d missed%n",
-				counter.getMissedCount(), counter.getTotalCount());
-	}
-
-
-	/**
-	 * This method is not meant to be part of the final framework. It was included to demonstrate
-	 * three different ways to tap into the code coverage results/metrics using jacoco. 
-	 * 
-	 * This method is deprecated and will be removed from the final product after your team completes 
-	 * development. Please do not add additional dependencies to this method. 
-	 */
-	@Deprecated 
-	private void showCodeCoverageResultsExample() {
-		if (optionYamlOnly) {
-			return;
-		}
-
-		// Below is the first example of how to tap into code coverage metrics
-		double result = generateSummaryCodeCoverageResults();
-		System.out.println("\n");
-		System.out.println("percent covered: " + result);
-
-		// Below is the second example of how to tap into code coverage metrics 
-		System.out.println("\n");
-		printRawCoverageStats();
-
-		// Below is the third example of how to tap into code coverage metrics
-		System.out.println("\n");
-		System.out.println(generateDetailedCodeCoverageResults());
-	}
-
-
-	private static class InputStringCollector implements Callable<String> {
-		InputStream in;
-
-		public InputStringCollector(InputStream inputStream) {
-			in = inputStream;
-		}
-
-		@Override
-		public String call() throws IOException {
-			return IOUtils.toString(in, Charset.defaultCharset());
 		}
 	}
 
