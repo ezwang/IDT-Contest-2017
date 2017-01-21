@@ -3,6 +3,7 @@ package contest.winter2017;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class DependentParameterFactory extends ParameterFactory {
 	// key: regex, value: parameter
@@ -24,7 +25,7 @@ public class DependentParameterFactory extends ParameterFactory {
 
 		for (String regex : dependentParametersMap.keySet()) {
 			List<Parameter> obj = dependentParametersMap.get(regex);
-			boolean matches = currentParamsString.matches(regex) ||
+			boolean matches = currentParamsString.matches(Pattern.quote(regex)) ||
 					regex.isEmpty() && currentParamsString.isEmpty();
 			if (matches) {
 				possibleParamsList.addAll(obj);
