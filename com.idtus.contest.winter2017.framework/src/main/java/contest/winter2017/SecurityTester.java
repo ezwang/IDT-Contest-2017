@@ -42,16 +42,21 @@ public class SecurityTester {
 
 			//if(potentialParameter.isOptional())  //TODO? - your team might want to look at this flag and handle it as well!
 
-			// an enumeration parameter is one that has multiple options
-			if (potentialParameter.isEnumeration()) {
-				parameterString = potentialParameter.getEnumerationValues().get(0); // dumb logic - given a list of options, always use the first one
+			if (potentialParameter.getType() == Integer.class) {
+				parameterString = Integer.toString(1); // dumb logic - always use '1' for an Integer
+				previousParameterStrings.add(parameterString);
+			}
+			else if (potentialParameter.getType() == Double.class) {
+				parameterString = Double.toString(1.0); // dumb logic - always use '1.0' for a Double
+				previousParameterStrings.add(parameterString);
+			}
+			else if (potentialParameter.getType() == String.class) {
 
 				// if the parameter has internal format (eg. "<number>:<number>PM EST")
-				if(potentialParameter.isFormatted()) {
-
+				if (potentialParameter.isFormatted()) {
 					// loop over the areas of the format that must be replaced and choose values
 					List<Object> formatVariableValues = new ArrayList<Object>();
-					for(Class type :potentialParameter.getFormatVariables(parameterString)) {
+					for (Class type : potentialParameter.getFormatVariables()) {
 						if (type == Integer.class){ 
 							formatVariableValues.add(new Integer(1)); // dumb logic - always use '1' for an Integer
 						} else if (type == String.class) {
@@ -59,48 +64,19 @@ public class SecurityTester {
 						}
 					}
 
-					//build the formatted parameter string with the chosen values (eg. 1:1PM EST)
+					// build the formatted parameter string with the chosen values (eg. 1:1PM EST)
 					parameterString =
-							potentialParameter.getFormattedParameter(
-									parameterString, formatVariableValues);
+							potentialParameter.getFormattedParameter(formatVariableValues);
 				}
+				else {
+					parameterString = "one"; // dumb logic - always use 'one' for a String
+				}
+
 				previousParameterStrings.add(parameterString);
-				// if it is not an enumeration parameter, it is either an Integer, Double, or String
 			} else {
-				if (potentialParameter.getType() == Integer.class){ 
-					parameterString = Integer.toString(1);	// dumb logic - always use '1' for an Integer
-					previousParameterStrings.add(parameterString);
-				} else if (potentialParameter.getType() == Double.class) {
-					parameterString = Double.toString(1.0);	// dumb logic - always use '1.0' for a Double
-					previousParameterStrings.add(parameterString);
-				} else if (potentialParameter.getType() == String.class) {
-
-					// if the parameter has internal format (eg. "<number>:<number>PM EST")
-					if(potentialParameter.isFormatted()) {
-
-						// loop over the areas of the format that must be replaced and choose values
-						List<Object> formatVariableValues = new ArrayList<Object>();
-						for(Class type : potentialParameter.getFormatVariables()) {
-							if (type == Integer.class){ 
-								formatVariableValues.add(new Integer(1)); // dumb logic - always use '1' for an Integer
-							} else if (type == String.class) {
-								formatVariableValues.add(new String("one")); // dumb logic - always use 'one' for a String
-							}
-						}
-
-						//build the formatted parameter string with the chosen values (eg. 1:1PM EST)
-						parameterString =
-								potentialParameter.getFormattedParameter(formatVariableValues);
-					}
-					else {
-						parameterString = "one";		// dumb logic - always use 'one' for a String
-					}
-
-					previousParameterStrings.add(parameterString);
-				} else {
-					parameterString = "unknown type";
-				}
+				parameterString = "unknown type";
 			}
+
 			// because of the challenge associated with dependent parameters, we must go one parameter
 			// at a time, building up the parameter list - getNext is the method that we are using 
 			// to get the next set of options, given an accumulating parameter list. 

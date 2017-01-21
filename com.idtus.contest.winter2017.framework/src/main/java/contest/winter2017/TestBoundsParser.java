@@ -31,6 +31,7 @@ public class TestBoundsParser {
 	private static final String DEPENDENT_PARAMETER_KEY = "dependent parameters";
 
 	// keys for parsing Parameter
+	private static final String TYPE_KEY = "type";
 	private static final String ENUMERATED_VALUES_KEY = "enumerated values";
 	private static final String OPTIONAL_KEY = "optional";
 	private static final String FORMAT_KEY = "format";
@@ -178,7 +179,7 @@ public class TestBoundsParser {
 	private static List<Parameter> parseRawParamList(List<Map<String, Object>> rawList) {
 		List<Parameter> outList = new ArrayList<>();
 		for (Map<String, Object> map : rawList) {
-			outList.add(parseRawParam(map));
+			outList.addAll(parseRawParam(map));
 		}
 		return outList;
 	}
@@ -191,11 +192,11 @@ public class TestBoundsParser {
 			Object obj = rawMap.get(key);
 			List<Parameter> parameters = new ArrayList<>();
 			if (obj instanceof Map) {
-				parameters.add(parseRawParam((Map<String, Object>) obj));
+				parameters.addAll(parseRawParam((Map<String, Object>) obj));
 			}
 			else if (obj instanceof List) {
 				for (Map<String, Object> paramMap : (List<Map<String, Object>>) obj) {
-					parameters.add(parseRawParam(paramMap));
+					parameters.addAll(parseRawParam(paramMap));
 				}
 			}
 			outMap.put(key, parameters);
@@ -205,15 +206,14 @@ public class TestBoundsParser {
 
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static Parameter parseRawParam(Map<String, Object> inputMap) {
+	public static List<Parameter> parseRawParam(Map<String, Object> inputMap) {
 		Class type = null;
-		List<String> enumeratedValues = null;
 		boolean optional = false;
 		String format = null;
 		Object min = null;
 		Object max = null;
 
-		Object typeObj = inputMap.get("type");
+		Object typeObj = inputMap.get(TYPE_KEY);
 		if (typeObj instanceof String) {
 			try {
 				type = Class.forName((String) typeObj);
@@ -225,10 +225,6 @@ public class TestBoundsParser {
 			type = (Class) typeObj;
 		}
 
-
-		if (inputMap.containsKey(ENUMERATED_VALUES_KEY)) {
-			enumeratedValues = (List<String>) inputMap.get(ENUMERATED_VALUES_KEY);
-		}
 		if (inputMap.containsKey(OPTIONAL_KEY)) {
 			optional = (Boolean) inputMap.get(OPTIONAL_KEY);
 		}
@@ -242,6 +238,19 @@ public class TestBoundsParser {
 			max = inputMap.get(MAX_KEY);
 		}
 
-		return new Parameter(type, enumeratedValues, optional, format, min, max);
+		// put enumerated values as separate parameters
+		ArrayList<Parameter> parameterList = new ArrayList<>();
+		if (inputMap.containsKey(ENUMERATED_VALUES_KEY)) {
+			assert format == null;
+			List<String> enumValues = (List<String>) inputMap.get(ENUMERATED_VALUES_KEY);
+			for (String enumFormat : enumValues) {
+				parameterList.add(new Parameter(type, enumFormat, min, max, optional));
+			}
+		}
+		else {
+			parameterList.add(new Parameter(type, format, min, max, optional));
+		}
+
+		return parameterList;
 	}
 }
