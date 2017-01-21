@@ -2,7 +2,6 @@ package contest.winter2017;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -13,12 +12,13 @@ import java.util.regex.Pattern;
  */
 public class Parameter {
 
-	/**
-	 * Input Map associated with this parameter
-	 */
 	@SuppressWarnings("rawtypes")
-	private Map inputMap;
-	
+	final private Class type;
+	final private List<String> enumeratedValues;
+	final private boolean optional;
+	final private String format;
+	final private Object min;
+	final private Object max;
 	
 	/**
 	 * Pattern to replace if the parameter is formatted
@@ -28,11 +28,17 @@ public class Parameter {
 
 	/**
 	 * Ctr for Parameter
-	 * @param inputMap - map containing parameter meta data
 	 */
 	@SuppressWarnings("rawtypes")
-	public Parameter(Map inputMap) {
-		this.inputMap = inputMap;
+	public Parameter(Class type, List<String> enumeratedValues, boolean optional,
+			String format, Object min, Object max) {
+
+		this.type = type;
+		this.enumeratedValues = enumeratedValues;
+		this.optional = optional;
+		this.format = format;
+		this.min = min;
+		this.max = max;
 	}
 
 	/**
@@ -41,17 +47,7 @@ public class Parameter {
 	 */
 	@SuppressWarnings("rawtypes")
 	public Class getType() {
-		Object type = this.inputMap.get("type");
-		if (type instanceof String) {
-			try {
-				return Class.forName(type.toString());
-			} catch (ClassNotFoundException e) {
-				return null;
-			}
-		}
-		else {
-			return (Class) type;
-		}
+		return type;
 	}
 
 	/**
@@ -60,20 +56,15 @@ public class Parameter {
 	 * @return boolean true if this parameter is an enumeration, false if it is not
 	 */
 	public boolean isEnumeration() {
-		if (inputMap.get("enumerated values") != null) {
-			return true;
-		} else {
-			return false;
-		}
+		return enumeratedValues != null;
 	}
 
 	/**
 	 * Getter for enumeration values (if this parameter is an enumeration)
 	 * @return List<String> containing multiple options associated with this parameter
 	 */
-	@SuppressWarnings("unchecked")
 	public List<String> getEnumerationValues() {
-		return (List<String>) inputMap.get("enumerated values");
+		return enumeratedValues;
 	}
 
 	/**
@@ -81,7 +72,7 @@ public class Parameter {
 	 * @return Object representing the minimum value associated with this parameter
 	 */
 	public Object getMin() {
-		return inputMap.get("min");
+		return min;
 	}
 
 	/**
@@ -89,7 +80,7 @@ public class Parameter {
 	 * @return Object representing the maximum value associated with this parameter
 	 */
 	public Object getMax() {
-		return inputMap.get("max");
+		return max;
 	}
 
 	/**
@@ -97,12 +88,7 @@ public class Parameter {
 	 * @return boolean true indicates the parameter is optional
 	 */
 	public boolean isOptional() {
-		if(inputMap.get("optional") != null) {
-			return (Boolean)inputMap.get("optional");
-		}
-		else {
-			return false;
-		}
+		return optional;
 	}
 	
 	
@@ -119,7 +105,7 @@ public class Parameter {
 			}
 		}
 		else {
-			if(inputMap.get("format") != null) {
+			if (format != null) {
 				return true;
 			}
 		}
@@ -133,7 +119,7 @@ public class Parameter {
 	 * @return String with the parameters format <<REPLACE_ME_...>> are included
 	 */
 	public String getFormat() {
-		return (String)inputMap.get("format");
+		return format;
 	}
 
 	/**
@@ -142,7 +128,7 @@ public class Parameter {
 	 */
 	@SuppressWarnings("rawtypes")
 	public List<Class> getFormatVariables() {
-		return getFormatVariables((String)inputMap.get("format"));
+		return getFormatVariables(format);
 	}
 	
 	
@@ -153,8 +139,7 @@ public class Parameter {
 	 */
 	@SuppressWarnings("rawtypes")
 	public List<Class> getFormatVariables(String format) {
-		
-		if(format == null) {
+		if (format == null) {
 			return null;
 		}
 		
@@ -189,17 +174,16 @@ public class Parameter {
 	 * @return String containing the parameter with <<REPLACE_ME_...>> placeholders replaced with the passed in values
 	 */
 	public String getFormattedParameter(List<Object> formatVariableValues) {
-		return getFormattedParameter((String)inputMap.get("format"), formatVariableValues);
+		return getFormattedParameter(format, formatVariableValues);
 	}
 		
 	/**
 	 * Utility method to build a valid formatted parameter by replacing all of the <<REPLACE_ME_...>> in the format parameter string
-	 * @param String - containing the orginial format strin with the <<REPLACE_ME_...>> in it
+	 * @param String - containing the orginial format string with the <<REPLACE_ME_...>> in it
 	 * @param List<Object> - containing the values that will replace the format for <<REPLACE_ME_...>> placeholders of this formatted parameter
 	 * @return String containing the parameter with <<REPLACE_ME_...>> placeholders replaced with the passed in values
 	 */
 	public String getFormattedParameter(String format, List<Object> formatVariableValues) {
-	
 		Matcher replaceMeMatcher = replaceMePattern.matcher(format);
 		StringBuffer sb = new StringBuffer();
 		for(Object variable : formatVariableValues) {

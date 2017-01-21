@@ -26,8 +26,16 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
 public class TestBoundsParser {
+	// keys for parsing TestBounds
 	private static final String FIXED_PARAMETER_KEY = "fixed parameter list";
 	private static final String DEPENDENT_PARAMETER_KEY = "dependent parameters";
+
+	// keys for parsing Parameter
+	private static final String ENUMERATED_VALUES_KEY = "enumerated values";
+	private static final String OPTIONAL_KEY = "optional";
+	private static final String FORMAT_KEY = "format";
+	private static final String MIN_KEY = "min";
+	private static final String MAX_KEY = "max";
 
 	// Utility values for JSON parsing
 	private static final Type STRING_OBJECT_MAP = new TypeToken<HashMap<String, Object>>(){}.getType();
@@ -59,25 +67,28 @@ public class TestBoundsParser {
 	 * Create a TestBoundsParser from a map.
 	 * @param map
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings("unchecked")
 	public TestBoundsParser(Map<String, Object> map) {
 		originalMap = map;
 
 		// fill in tests
 		tests = new ArrayList<Test>();
-		List<Map<String, Object>> testList = (List<Map<String, Object>>) map.get("tests");
+		List<Map<String, Object>> testList =
+				(List<Map<String, Object>>) map.get("tests");
 		for (Map<String, Object> inTest : testList) {
 			tests.add(new Test(inTest));
 		}
 
 		// fill in parameterFactory
 		if (map.containsKey(FIXED_PARAMETER_KEY)) {
-			List<Map> rawList = (List<Map>) map.get(FIXED_PARAMETER_KEY);
+			List<Map<String, Object>> rawList =
+					(List<Map<String, Object>>) map.get(FIXED_PARAMETER_KEY);
 			List<Parameter> paramList = parseRawParamList(rawList);
 			parameterFactory = new FixedParameterFactory(paramList);
 		}
 		else if (map.containsKey(DEPENDENT_PARAMETER_KEY)) {
-			Map<String, Object> rawMap = (Map<String, Object>) map.get(DEPENDENT_PARAMETER_KEY);
+			Map<String, Object> rawMap =
+					(Map<String, Object>) map.get(DEPENDENT_PARAMETER_KEY);
 			Map<String, List<Parameter>> paramMap = parseRawParamMap(rawMap);
 			parameterFactory = new DependentParameterFactory(paramMap);
 		}
@@ -156,31 +167,73 @@ public class TestBoundsParser {
 	}
 
 
-	@SuppressWarnings("rawtypes")
-	private static List<Parameter> parseRawParamList(List<Map> rawList) {
+	private static List<Parameter> parseRawParamList(List<Map<String, Object>> rawList) {
 		List<Parameter> outList = new ArrayList<>();
-		for (Map map : rawList) {
-			outList.add(new Parameter(map));
+		for (Map<String, Object> map : rawList) {
+			outList.add(parseRawParam(map));
 		}
 		return outList;
 	}
 
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings("unchecked")
 	private static Map<String, List<Parameter>> parseRawParamMap(Map<String, Object> rawMap) {
 		Map<String, List<Parameter>> outMap = new HashMap<>();
 		for (String key : rawMap.keySet()) {
 			Object obj = rawMap.get(key);
 			List<Parameter> parameters = new ArrayList<>();
 			if (obj instanceof Map) {
-				parameters.add(new Parameter((Map) obj));
-			} else {
-				for (Map paramMap : (List<Map>) obj) {
-					parameters.add(new Parameter(paramMap));
+				parameters.add(parseRawParam((Map<String, Object>) obj));
+			}
+			else {
+				for (Map<String, Object> paramMap : (List<Map<String, Object>>) obj) {
+					parameters.add(parseRawParam(paramMap));
 				}
 			}
 			outMap.put(key, parameters);
 		}
 		return outMap;
+	}
+
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static Parameter parseRawParam(Map<String, Object> inputMap) {
+		Class type = null;
+		List<String> enumeratedValues = null;
+		boolean optional = false;
+		String format = null;
+		Object min = null;
+		Object max = null;
+
+		Object typeObj = inputMap.get("type");
+		if (typeObj instanceof String) {
+			try {
+				type = Class.forName((String) typeObj);
+			} catch (ClassNotFoundException e) {
+				// pass
+			}
+		}
+		else if (type instanceof Class) {
+			type = (Class) type;
+		}
+
+
+		if (inputMap.containsKey(ENUMERATED_VALUES_KEY)) {
+			enumeratedValues = (List<String>) inputMap.get(ENUMERATED_VALUES_KEY);
+		}
+		if (inputMap.containsKey(OPTIONAL_KEY)) {
+			optional = (Boolean) inputMap.get(OPTIONAL_KEY);
+		}
+		if (inputMap.containsKey(FORMAT_KEY)) {
+			format = (String) inputMap.get(FORMAT_KEY);
+		}
+		if (inputMap.containsKey(MIN_KEY)) {
+			min = inputMap.get(MIN_KEY);
+		}
+		if (inputMap.containsKey(MAX_KEY)) {
+			max = inputMap.get(MAX_KEY);
+		}
+
+		return new Parameter(type, enumeratedValues, optional, format, min, max);
 	}
 }
