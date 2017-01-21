@@ -263,7 +263,7 @@ public class Main {
 	 */
 	private static File extractBundledJacocoJar() throws IOException {
 		// read file bundled with this project
-		InputStream fileStream = Main.class.getResourceAsStream(JACOCO_AGENT_FILENAME);
+		InputStream fileStream = Main.class.getClassLoader().getResourceAsStream(JACOCO_AGENT_FILENAME);
 
 		// open temporary output file
 		File tempFile = File.createTempFile("jacocoJar", JACOCO_AGENT_FILENAME);
