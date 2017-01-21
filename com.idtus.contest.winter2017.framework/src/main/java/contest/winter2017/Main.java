@@ -201,6 +201,8 @@ public class Main {
 			options.jacocoOutputDirPath = cliArgs.getOptionValue(JACOCO_OUTPUT_PATH);
 		} else {
 			options.jacocoOutputDirPath = createTempDir().getAbsolutePath();
+			// delete temporary jacoco output directory on exit
+			Runtime.getRuntime().addShutdownHook(new Thread(() -> FileUtils.deleteQuietly(new File(options.jacocoOutputDirPath))));
 		}
 
 		// determine jacocoOutputFilePath
@@ -222,6 +224,7 @@ public class Main {
 			try {
 				File tempFile = extractBundledJacocoJar();
 				options.jacocoAgentJarPath = tempFile.getAbsolutePath();
+				tempFile.deleteOnExit();
 			}
 			catch (IOException ex) {
 				System.err.println("Error: Unable to extract Jacoco Agent jar!");
