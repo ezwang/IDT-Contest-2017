@@ -2,6 +2,7 @@ package contest.winter2017;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,57 +12,54 @@ import java.util.regex.Pattern;
  * @author IDT
  */
 public class Parameter {
+	private static final String STRING_REPLACE = "<<REPLACE_ME_STRING>>";
+	private static final String INTEGER_REPLACE = "<<REPLACE_ME_INT>>";
+	private static final Pattern REPLACE_PATTERN = Pattern.compile("<<REPLACE_ME_(STRING|INT)>>");
 
-	@SuppressWarnings("rawtypes")
-	final private Class type;
-	final private String format;
-	final private Object min;
-	final private Object max;
-	final private boolean optional;
-
-
-	/**
-	 * Pattern to replace if the parameter is formatted
-	 */
-	private Pattern replaceMePattern = null;
-
+	private final List<ParameterType<?>> typeList;
+	private final String format;
+	private final boolean optional;
 
 	/**
 	 * Ctr for Parameter
 	 */
-	@SuppressWarnings("rawtypes")
-	public Parameter(Class type, String format, Object min, Object max, boolean optional) {
-		this.type = type;
-		this.format = format;
-		this.min = min;
-		this.max = max;
+	public Parameter(ParameterType<?> type, boolean optional) {
+		this.format = null;
 		this.optional = optional;
+		this.typeList = new ArrayList<>();
+		typeList.add(type);
 	}
 
-	/**
-	 * Getter for type of parameter (integer, long, double, float, String, etc)
-	 * @return
-	 */
-	@SuppressWarnings("rawtypes")
-	public Class getType() {
-		return type;
+
+	public Parameter(String format, boolean optional) {
+		this.format = format;
+		this.optional = optional;
+		this.typeList = new ArrayList<>();
+
+		Matcher m = REPLACE_PATTERN.matcher(format);
+		while (m.find()) {
+			switch (m.group()) {
+			case STRING_REPLACE:
+				typeList.add(new ParameterType.StringType());
+				break;
+			case INTEGER_REPLACE:
+				typeList.add(new ParameterType.IntegerType());
+				break;
+			default:
+				throw new IllegalStateException();
+			}
+		}
 	}
 
-	/**
-	 * Getter for the min value associated with this parameter (if one exists)
-	 * @return Object representing the minimum value associated with this parameter
-	 */
-	public Object getMin() {
-		return min;
-	}
 
 	/**
-	 * Getter for the max value associated with this parameter (if one exists)
-	 * @return Object representing the maximum value associated with this parameter
+	 * Getter for the types of the variables in the format string... useful for formatted enumerated values
+	 * @return List<ParameterType<?>> that contains the types in the format string
 	 */
-	public Object getMax() {
-		return max;
+	public List<ParameterType<?>> getTypeList() {
+		return typeList;
 	}
+
 
 	/**
 	 * Getter for the optionality of the parameter
@@ -91,53 +89,45 @@ public class Parameter {
 
 
 	/**
-	 * Getter for the types of the variables (eg. <<REPLACE_ME_STRING>>) in the format string... useful for formatted enumerated values
-	 * @return List<Class> that contains the types of each of the <<REPLACE_ME_...>> in the format string
-	 */
-	@SuppressWarnings("rawtypes")
-	public List<Class> getFormatVariables() {
-		if (format == null) {
-			return null;
-		}
-
-		List<Class> typeList = new ArrayList<Class>();
-
-		this.replaceMePattern = Pattern.compile("<<REPLACE_ME_(STRING|INT)>>");
-		Matcher replaceMeMatcher = replaceMePattern.matcher(format);
-		while(replaceMeMatcher.find()) {
-			switch(replaceMeMatcher.group()) {
-			case "<<REPLACE_ME_STRING>>":
-				typeList.add(String.class);
-				break;
-			case "<<REPLACE_ME_INT>>":
-				typeList.add(Integer.class);
-				break;
-			default:
-				//NOP
-				break;
-			}
-		}
-
-		return typeList;
-	}
-
-
-	/**
 	 * Utility method to build a valid formatted parameter by replacing all of the <<REPLACE_ME_...>> in the format parameter string
 	 * @param List<Object> - containing the values that will replace the format for <<REPLACE_ME_...>> placeholders of this formatted parameter
 	 * @return String containing the parameter with <<REPLACE_ME_...>> placeholders replaced with the passed in values
 	 */
-	public String getFormattedParameter(List<Object> formatVariableValues) {
-		Matcher replaceMeMatcher = replaceMePattern.matcher(format);
+	public String getFormattedParameter(List<?> formatVariableValues) {
+		if (formatVariableValues.size() != typeList.size()) {
+			throw new IllegalArgumentException("wrong number of values");
+		}
+
+		// if there's no format, just return as string
+		if (format == null) {
+			assert typeList.size() == 1;
+			Object variable = formatVariableValues.get(0);
+			if (!typeList.get(0).isInstance(variable)) {
+				throw new IllegalArgumentException("type of " + variable + " is incorrect");
+			}
+			return String.valueOf(variable);
+		}
+
+		// find pattern to replace in string
+		Matcher m = REPLACE_PATTERN.matcher(format);
 		StringBuffer sb = new StringBuffer();
-		for(Object variable : formatVariableValues) {
-			if(replaceMeMatcher.find()) {
-				replaceMeMatcher.appendReplacement(sb, variable.toString());
+
+		ListIterator<ParameterType<?>> typeIterator = typeList.listIterator();
+		for (Object variable : formatVariableValues) {
+			// check that type of variable is correct
+			if (!typeIterator.next().isInstance(variable)) {
+				throw new IllegalArgumentException("type of " + variable + " is incorrect");
+			}
+
+			// append replacement to string
+			if (m.find()) {
+				m.appendReplacement(sb, String.valueOf(variable));
+			} else {
+				throw new IllegalStateException();
 			}
 		}
-		replaceMeMatcher.appendTail(sb);
 
+		m.appendTail(sb);
 		return sb.toString();
 	}
-
 }

@@ -15,15 +15,14 @@ import java.util.Set;
 public class SecurityTester {
 	private final ProgramRunner programRunner;
 
+	private Set<String> errorMessages;
 	private Output output;
-	private Set<String> yaml_errors;
 
 	public SecurityTester(ProgramRunner programRunner) {
+		this.errorMessages = new HashSet<String>();
 		this.programRunner = programRunner;
-		this.yaml_errors = new HashSet<String>();
 	}
 
-	@SuppressWarnings("rawtypes")
 	public void runTests(ParameterFactory parameterFactory) {
 		/////////// START EXAMPLE CODE /////////////
 
@@ -33,49 +32,40 @@ public class SecurityTester {
 		// what each parameter type is, we are assigning it a simple (dumb) value so that we can use those parameters 
 		// to execute the black-box jar. By the time we finish this example, we will have an array of concrete 
 		// parameters that we can use to execute the black-box jar.
-		List<String> previousParameterStrings = new ArrayList<String>(); // start with a blank parameter list since we are going to start with the first parameter
+
+		// start with a blank parameter list since we are going to start with the first parameter
+		List<String> previousParameterStrings = new ArrayList<String>();
 		List<Parameter> potentialParameters = parameterFactory.getNext(previousParameterStrings);
-		Parameter potentialParameter;
+
 		while (!potentialParameters.isEmpty()) {
-			String parameterString = "";
-			potentialParameter = potentialParameters.get(0); 
+			Parameter potentialParameter = potentialParameters.get(0);
 
-			//if(potentialParameter.isOptional())  //TODO? - your team might want to look at this flag and handle it as well!
+			// TODO? - your team might want to look at this flag and handle it as well!
+			// if (potentialParameter.isOptional())
 
-			if (potentialParameter.getType() == Integer.class) {
-				parameterString = Integer.toString(1); // dumb logic - always use '1' for an Integer
-				previousParameterStrings.add(parameterString);
-			}
-			else if (potentialParameter.getType() == Double.class) {
-				parameterString = Double.toString(1.0); // dumb logic - always use '1.0' for a Double
-				previousParameterStrings.add(parameterString);
-			}
-			else if (potentialParameter.getType() == String.class) {
-
-				// if the parameter has internal format (eg. "<number>:<number>PM EST")
-				if (potentialParameter.isFormatted()) {
-					// loop over the areas of the format that must be replaced and choose values
-					List<Object> formatVariableValues = new ArrayList<Object>();
-					for (Class type : potentialParameter.getFormatVariables()) {
-						if (type == Integer.class){ 
-							formatVariableValues.add(new Integer(1)); // dumb logic - always use '1' for an Integer
-						} else if (type == String.class) {
-							formatVariableValues.add(new String("one")); // dumb logic - always use 'one' for a String
-						}
-					}
-
-					// build the formatted parameter string with the chosen values (eg. 1:1PM EST)
-					parameterString =
-							potentialParameter.getFormattedParameter(formatVariableValues);
+			// loop over the areas of the format that must be replaced and choose values
+			List<Object> formatVariableValues = new ArrayList<Object>();
+			for (ParameterType<?> type : potentialParameter.getTypeList()) {
+				if (type instanceof ParameterType.IntegerType) {
+					// dumb logic - always use '1' for an Integer
+					formatVariableValues.add(new Integer(1));
+				}
+				else if (type instanceof ParameterType.DoubleType) {
+					// dumb logic - always use '1.0' for a Double
+					formatVariableValues.add(new Double(1.0));
+				}
+				else if (type instanceof ParameterType.StringType) {
+					// dumb logic - always use 'one' for a String
+					formatVariableValues.add(new String("one"));
 				}
 				else {
-					parameterString = "one"; // dumb logic - always use 'one' for a String
+					formatVariableValues.add("unknown type");
 				}
-
-				previousParameterStrings.add(parameterString);
-			} else {
-				parameterString = "unknown type";
 			}
+
+			// build the formatted parameter string with the chosen values (eg. 1:1PM EST)
+			String parameterString = potentialParameter.getFormattedParameter(formatVariableValues);
+			previousParameterStrings.add(parameterString);
 
 			// because of the challenge associated with dependent parameters, we must go one parameter
 			// at a time, building up the parameter list - getNext is the method that we are using 
@@ -89,7 +79,7 @@ public class SecurityTester {
 
 		if (!output.getStdErrString().isEmpty()) {
 			String err = output.getStdErrString().trim();
-			this.yaml_errors.add(err);
+			errorMessages.add(err);
 		}
 
 		/////////// END EXAMPLE CODE ////////////// 
@@ -106,13 +96,13 @@ public class SecurityTester {
 
 	public String getYaml() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("Unique error count: " + this.yaml_errors.size() + "\n");
-		if (this.yaml_errors.isEmpty()) {
+		sb.append("Unique error count: " + this.errorMessages.size() + "\n");
+		if (this.errorMessages.isEmpty()) {
 			sb.append("Errors seen: []");
 		}
 		else {
 			sb.append("Errors seen:\n");
-			for (String errorString : this.yaml_errors) {
+			for (String errorString : this.errorMessages) {
 				errorString = errorString.trim();
 				if (errorString.contains("\n")) {
 					sb.append("  - |-\n");

@@ -42,10 +42,9 @@ public class TestBoundsParser {
 	// Utility values for JSON parsing
 	private static final Type STRING_OBJECT_MAP = new TypeToken<HashMap<String, Object>>(){}.getType();
 
-	@SuppressWarnings("rawtypes")
-	private static final JsonSerializer<Class> JSON_SERIALIZER = new JsonSerializer<Class>() {
+	private static final JsonSerializer<Class<?>> JSON_SERIALIZER = new JsonSerializer<Class<?>>() {
 		@Override
-		public JsonElement serialize(Class src, Type typeOfSrc, JsonSerializationContext context) {
+		public JsonElement serialize(Class<?> src, Type typeOfSrc, JsonSerializationContext context) {
 			return new JsonPrimitive(src.getName());
 		}
 	};
@@ -214,50 +213,63 @@ public class TestBoundsParser {
 	}
 
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings("unchecked")
 	public static List<Parameter> parseRawParam(Map<String, Object> inputMap) {
-		Class type = null;
-		boolean optional = false;
-		String format = null;
-		Object min = null;
-		Object max = null;
+		boolean optional = inputMap.containsKey(OPTIONAL_KEY) && ((Boolean) inputMap.get(OPTIONAL_KEY));
+		Object min = inputMap.get(MIN_KEY);
+		Object max = inputMap.get(MAX_KEY);
 
+		// get type key as string
 		Object typeObj = inputMap.get(TYPE_KEY);
-		if (typeObj instanceof String) {
-			try {
-				type = Class.forName((String) typeObj);
-			} catch (ClassNotFoundException e) {
-				// pass
-			}
-		}
-		else if (typeObj instanceof Class) {
-			type = (Class) typeObj;
+		String className;
+		if (typeObj instanceof Class) {
+			className = ((Class<?>) typeObj).getName();
+		} else if (typeObj instanceof String) {
+			className = (String) typeObj;
+		} else {
+			throw new IllegalArgumentException();
 		}
 
-		if (inputMap.containsKey(OPTIONAL_KEY)) {
-			optional = (Boolean) inputMap.get(OPTIONAL_KEY);
-		}
-		if (inputMap.containsKey(FORMAT_KEY)) {
-			format = (String) inputMap.get(FORMAT_KEY);
-		}
-		if (inputMap.containsKey(MIN_KEY)) {
-			min = inputMap.get(MIN_KEY);
-		}
-		if (inputMap.containsKey(MAX_KEY)) {
-			max = inputMap.get(MAX_KEY);
-		}
-
-		// put enumerated values as separate parameters
 		ArrayList<Parameter> parameterList = new ArrayList<>();
+
+		// put enumerated values as separate parameters with format strings
 		if (inputMap.containsKey(ENUMERATED_VALUES_KEY)) {
-			assert format == null;
+			assert className.equals(String.class.getName());
+			assert min == null && max == null;
+			assert !inputMap.containsKey(FORMAT_KEY);
+
 			List<String> enumValues = (List<String>) inputMap.get(ENUMERATED_VALUES_KEY);
 			for (String enumFormat : enumValues) {
-				parameterList.add(new Parameter(type, enumFormat, min, max, optional));
+				parameterList.add(new Parameter(enumFormat, optional));
 			}
 		}
+
+		// a parameter with only one format string
+		else if (inputMap.containsKey(FORMAT_KEY)) {
+			assert className.equals(String.class.getName());
+			assert min == null && max == null;
+
+			String format = (String) inputMap.get(FORMAT_KEY);
+			parameterList.add(new Parameter(format, optional));
+		}
+
+		// no format; use the class name to determine a parameter
+		else if (inputMap.containsKey(TYPE_KEY)) {
+			ParameterType<?> paramType;
+			if (className.equals(Integer.class.getName())) {
+				paramType = new ParameterType.IntegerType((Integer) min, (Integer) max);
+			} else if (className.equals(Double.class.getName())) {
+				paramType = new ParameterType.DoubleType((Double) min, (Double) max);
+			} else if (className.equals(String.class.getName())) {
+				paramType = new ParameterType.StringType();
+			} else {
+				throw new IllegalArgumentException("don't understand class: " + className);
+			}
+			parameterList.add(new Parameter(paramType, optional));
+		}
+
 		else {
-			parameterList.add(new Parameter(type, format, min, max, optional));
+			throw new IllegalArgumentException("can't determine parameter type");
 		}
 
 		return parameterList;
