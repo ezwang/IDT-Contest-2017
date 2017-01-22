@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.Attributes;
-import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -28,8 +27,14 @@ import com.google.gson.stream.JsonWriter;
 
 public class TestBoundsParser {
 	// keys for parsing TestBounds
+	private static final String TESTS_KEY = "tests";
 	private static final String FIXED_PARAMETER_KEY = "fixed parameter list";
 	private static final String DEPENDENT_PARAMETER_KEY = "dependent parameters";
+
+	// keys for parsing Test
+	private static final String TEST_PARAMETERS_KEY = "parameters";
+	private static final String TEST_STDOUT_KEY = "stdOutExpectedResultRegex";
+	private static final String TEST_STDERR_KEY = "stdErrExpectedResultRegex";
 
 	// keys for parsing Parameter
 	private static final String TYPE_KEY = "type";
@@ -39,9 +44,12 @@ public class TestBoundsParser {
 	private static final String MIN_KEY = "min";
 	private static final String MAX_KEY = "max";
 
+	// strings for parsing TestBounds class
+	private static final String TESTBOUNDS_CLASS_FORMAT = "%sTestBounds";
+	private static final String TESTBOUNDS_METHOD_NAME = "testBounds";
+
 	// Utility values for JSON parsing
 	private static final Type STRING_OBJECT_MAP = new TypeToken<HashMap<String, Object>>(){}.getType();
-
 	private static final JsonSerializer<Class<?>> JSON_SERIALIZER = new JsonSerializer<Class<?>>() {
 		@Override
 		public JsonElement serialize(Class<?> src, Type typeOfSrc, JsonSerializationContext context) {
@@ -73,7 +81,7 @@ public class TestBoundsParser {
 		originalMap = map;
 
 		// fill in tests
-		List<Map<String, Object>> rawTestList =	(List<Map<String, Object>>) map.get("tests");
+		List<Map<String, Object>> rawTestList =	(List<Map<String, Object>>) map.get(TESTS_KEY);
 		tests = parseRawTestList(rawTestList);
 
 		// fill in parameterFactory
@@ -126,19 +134,49 @@ public class TestBoundsParser {
 		URL fileURL = jarFile.toURI().toURL();
 		URLClassLoader cl = URLClassLoader.newInstance(new URL[]{fileURL});
 
-		String mainClassTestBoundsName = mainClassName + "TestBounds";
+		String mainClassTestBoundsName = String.format(TESTBOUNDS_CLASS_FORMAT, mainClassName);
 		Class<?> mainClassTestBounds = cl.loadClass(mainClassTestBoundsName);
 
 		// use reflection to invoke the TestBounds class to get the usage information from the jar
-		Method testBoundsMethod = mainClassTestBounds.getMethod("testBounds");
+		Method testBoundsMethod = mainClassTestBounds.getMethod(TESTBOUNDS_METHOD_NAME);
 		Object mainClassTestBoundsInstance = mainClassTestBounds.newInstance();
 
 		@SuppressWarnings("unchecked")
 		Map<String, Object> mainClassTestBoundsMap =
 			(Map<String, Object>) testBoundsMethod.invoke(mainClassTestBoundsInstance);
 
+		fixTestBoundsMap(mainClassTestBoundsMap);
 		return new TestBoundsParser(mainClassTestBoundsMap);
 	}
+
+
+	// some adjustments to test cases need to be made when reading the map from a JAR
+	// this is so that they'll be correctly written to the json file
+	@SuppressWarnings("unchecked")
+	private static void fixTestBoundsMap(Map<String, Object> map) {
+		List<Map<String, Object>> tests = (List<Map<String, Object>>) map.get(TESTS_KEY);
+		for (Map<String, Object> test : tests) {
+			List<Object> oldParameters = (List<Object>) test.get(TEST_PARAMETERS_KEY);
+			List<String> newParameters = new ArrayList<>(oldParameters.size());
+			for (Object obj : oldParameters) {
+				String param;
+				if (obj instanceof String) {
+					// if the argument is surrounded by quotes, remove the quotes
+					// this is because the quotes were originally needed to escape arguments in the shell
+					param = (String) obj;
+					if (param.matches("^\".*\"$")) {
+						param = param.substring(1, param.length()-1);
+					}
+				} else {
+					// convert all parameter objects to String
+					param = String.valueOf(obj);
+				}
+				newParameters.add(param);
+			}
+			test.put(TEST_PARAMETERS_KEY, newParameters);
+		}
+	}
+
 
 	public Map<String, Object> getOriginalMap() {
 		return originalMap;
@@ -157,15 +195,8 @@ public class TestBoundsParser {
 	 * @param testFile The JSON file to write to
 	 * @throws IOException
 	 */
-	@SuppressWarnings("unchecked")
 	public void writeJson(File testFile) throws IOException {
 		// convert all arguments into strings
-		List<HashMap<String, Object>> tests = (List<HashMap<String, Object>>)this.originalMap.get("tests");
-		for (HashMap<String, Object> test : tests) {
-			test.put("parameters", ((List<Object>)test.get("parameters")).stream().map((v) -> v.toString()).collect(Collectors.toList()));
-		}
-		this.originalMap.put("tests", tests);
-
 		JsonWriter writer = gson.newJsonWriter(new FileWriter(testFile));
 		gson.toJson(this.originalMap, STRING_OBJECT_MAP, writer);
 		writer.close();
@@ -176,9 +207,9 @@ public class TestBoundsParser {
 	private static List<Test> parseRawTestList(List<Map<String, Object>> rawList) {
 		List<Test> testList = new ArrayList<>();
 		for (Map<String, Object> inputMap : rawList) {
-			List<Object> parameters = (List<Object>) inputMap.get("parameters");
-			String stdOutExpectedResultRegex = (String) inputMap.get("stdOutExpectedResultRegex");
-			String stdErrExpectedResultRegex = (String) inputMap.get("stdErrExpectedResultRegex");
+			List<String> parameters = (List<String>) inputMap.get(TEST_PARAMETERS_KEY);
+			String stdOutExpectedResultRegex = (String) inputMap.get(TEST_STDOUT_KEY);
+			String stdErrExpectedResultRegex = (String) inputMap.get(TEST_STDERR_KEY);
 			testList.add(new Test(parameters, stdOutExpectedResultRegex, stdErrExpectedResultRegex));
 		}
 		return testList;

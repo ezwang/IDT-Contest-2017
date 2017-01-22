@@ -14,7 +14,7 @@ public class Test {
 	 * List of parameter values that will be passed into the executable jar as 
 	 * as single test
 	 */
-	private List<Object> parameters;
+	private List<String> parameters;
 	
 	/**
 	 * The regex string that describes the expected std out result for the test
@@ -30,7 +30,7 @@ public class Test {
 	/**
 	 * Ctr for Test object
 	 */
-	public Test(List<Object> parameters,
+	public Test(List<String> parameters,
 			String stdOutExpectedResultRegex,
 			String stdErrExpectedResultRegex) {
 		this.parameters = parameters;
@@ -43,7 +43,7 @@ public class Test {
 	 * Getter for parameters List
 	 * @return
 	 */
-	public List<Object> getParameters() {
+	public List<String> getParameters() {
 		return parameters;
 	}
 

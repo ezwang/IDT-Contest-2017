@@ -30,11 +30,7 @@ public class BasicTester {
 		// create list of parameters for each test
 		List<List<String>> testParametersList = new ArrayList<List<String>>();
 		for (Test test : tests) {
-			List<String> parameters = new ArrayList<String>();
-			for (Object o : test.getParameters()) {
-				parameters.add(o.toString());
-			}
-			testParametersList.add(parameters);
+			testParametersList.add(test.getParameters());
 		}
 
 		// collect results in list
