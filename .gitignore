@@ -1,3 +1,9 @@
-.metadata/
+.metadata
+.project
+.classpath
+local.properties
+.settings/
+bin/
+target/
 *.exec
 *.swp
