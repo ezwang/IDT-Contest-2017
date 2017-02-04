@@ -35,7 +35,7 @@ public class SecurityTester {
 		outputs = programRunner.runTests(tests);
 
 		for (Output output : outputs) {
-			if (!output.getStdErrString().isEmpty()) {
+			if (!output.getStdErrString().isEmpty() && output.getStdErrString().startsWith("Exception in")) {
 				String err = output.getStdErrString().trim();
 				errorMessages.add(err);
 			}

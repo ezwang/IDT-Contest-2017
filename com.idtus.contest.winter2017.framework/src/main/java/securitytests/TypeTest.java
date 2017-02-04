@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import contest.winter2017.DependentParameterFactory;
 import contest.winter2017.FixedParameterFactory;
 import contest.winter2017.Parameter;
 import contest.winter2017.ParameterFactory;
@@ -45,6 +46,18 @@ public class TypeTest implements SecurityTest {
 				}
 			}
 			out.add(params3);
+		}
+		else if (parameterFactory instanceof DependentParameterFactory) {
+			DependentParameterFactory dependParam = (DependentParameterFactory) parameterFactory;
+			Map<String, List<Parameter>> map = dependParam.getParameterMap();
+			List<String> params = new ArrayList<String>();
+			for (Entry<String, List<Parameter>> e : map.entrySet()) {
+				if (!e.getKey().isEmpty()) {
+					params.add(e.getKey().replaceAll("\\s*", ""));
+				}
+				params.add("test");
+			}
+			out.add(params);
 		}
 		return out;
 	}
