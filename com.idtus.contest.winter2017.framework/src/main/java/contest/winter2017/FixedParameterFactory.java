@@ -14,6 +14,10 @@ public class FixedParameterFactory extends ParameterFactory {
 	public boolean isBounded() {
 		return true;
 	}
+	
+	public List<Parameter> getParameterList() {
+			return fixedParameterList;
+	}
 
 	@Override
 	public List<Parameter> getNext(List<String> previousParameterValues) {

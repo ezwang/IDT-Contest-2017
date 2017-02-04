@@ -16,6 +16,15 @@ public class ParameterType<T> {
 			super(String.class);
 		}
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (!(obj instanceof ParameterType)) {
+			return false;
+		}
+		ParameterType<?> pObj = (ParameterType<?>)obj;
+		return pObj.clazz == this.clazz;
+	}
 
 	public static abstract class NumberType<T extends Number> extends ParameterType<T> {
 		private final T min;

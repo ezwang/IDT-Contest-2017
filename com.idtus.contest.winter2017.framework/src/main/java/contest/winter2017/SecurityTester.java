@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import securitytests.ArgumentAmountTest;
 import securitytests.DefaultTest;
+import securitytests.TypeTest;
 
 /**
  * Exploratory security vulnerability testing is implemented here.
@@ -27,6 +29,8 @@ public class SecurityTester {
 		List<List<String>> tests = new ArrayList<List<String>>();
 		
 		tests.addAll((new DefaultTest()).getTests(parameterFactory));
+		tests.addAll((new TypeTest()).getTests(parameterFactory));
+		tests.addAll((new ArgumentAmountTest()).getTests(parameterFactory));
 		
 		outputs = programRunner.runTests(tests);
 
