@@ -1,12 +1,12 @@
 package securitytests;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import contest.winter2017.Parameter;
 import contest.winter2017.ParameterFactory;
 import contest.winter2017.ParameterType;
-import edu.emory.mathcs.backport.java.util.Collections;
 
 public class DefaultTest implements SecurityTest {
 
