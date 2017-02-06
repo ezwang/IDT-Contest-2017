@@ -89,8 +89,12 @@ public class Main {
 	/**
 	 * number of threads to use for basic tests
 	 */
-	public static final String BASIC_TEST_THREADS = "basicThreads";
+	public static final String TEST_THREADS = "threads";
 
+
+	/**
+	 * list of Option objects representing all command line arguments
+	 */
 	private static final Option[] CLI_OPTION_LIST = new Option[] {
 			// paths
 			Option.builder(JAR_TO_TEST_PATH).hasArg(true).required(true)
@@ -105,8 +109,8 @@ public class Main {
 				.desc("number of exploratory black box tests to run (default: 1000 iterations)").build(),
 			Option.builder(TEST_TIME).hasArg(true)
 				.desc("maximum time limit for exploratory black box tests to run (default: 300 seconds)").build(),
-			Option.builder(BASIC_TEST_THREADS).hasArg(true)
-				.desc("number of threads to use for basic tests (default: 5 threads)").build(),
+			Option.builder(TEST_THREADS).hasArg(true)
+				.desc("number of threads to use for tests (default: 2 threads)").build(),
 
 			// boolean options
 			Option.builder(NO_CONVERT_TO_JSON)
@@ -234,10 +238,10 @@ public class Main {
 		}
 
 		// get numThreads
-		options.numThreads = 1;
-		if (cliArgs.hasOption(BASIC_TEST_THREADS)) {
+		options.numThreads = 2;
+		if (cliArgs.hasOption(TEST_THREADS)) {
 			try {
-				options.numThreads = Integer.parseInt(cliArgs.getOptionValue(BASIC_TEST_THREADS));
+				options.numThreads = Integer.parseInt(cliArgs.getOptionValue(TEST_THREADS));
 			}
 			catch (NumberFormatException ex) {
 				System.err.println("Error: Unable to parse numThreads");
