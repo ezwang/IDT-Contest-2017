@@ -9,22 +9,24 @@ import contest.winter2017.ParameterFactory;
 
 public class ArgumentAmountTest implements SecurityTest {
 	private Random random;
+	private MismatchedTypeSelector selector;
 
 	public ArgumentAmountTest(Random random) {
 		this.random = random;
+		this.selector = new MismatchedTypeSelector(random);
 	}
 
 	@Override
 	public List<String> getNextInput(ParameterFactory parameterFactory) {
 		int len = random.nextInt(1000);
-		return Stream.generate(this::pickString)
+		return Stream.generate(this::pickValue)
 				.limit(len)
 				.map(String::valueOf)
 				.collect(Collectors.toList());
 	}
 
-	private String pickString() {
-		// TODO: use other strings?
-		return BoundaryValues.pickRandomString(random);
+	private Object pickValue() {
+		// abuse MismatchedTypeSelector, which ignores parameter type
+		return selector.getParameterValue(null);
 	}
 }
