@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Class that represents a single parameter for an executable jar. 
@@ -93,24 +94,10 @@ public class Parameter {
 	 * @param List<Object> - containing the values that will replace the format for <<REPLACE_ME_...>> placeholders of this formatted parameter
 	 * @return String containing the parameter with <<REPLACE_ME_...>> placeholders replaced with the passed in values
 	 */
-	public String getFormattedParameter(List<?> formatVariableValues) {
+	public String formatParameterChecked(List<?> formatVariableValues) {
 		if (formatVariableValues.size() != typeList.size()) {
 			throw new IllegalArgumentException("wrong number of values");
 		}
-
-		// if there's no format, just return as string
-		if (format == null) {
-			assert typeList.size() == 1;
-			Object variable = formatVariableValues.get(0);
-			if (!typeList.get(0).isInstance(variable)) {
-				throw new IllegalArgumentException("type of " + variable + " is incorrect");
-			}
-			return String.valueOf(variable);
-		}
-
-		// find pattern to replace in string
-		Matcher m = REPLACE_PATTERN.matcher(format);
-		StringBuffer sb = new StringBuffer();
 
 		ListIterator<ParameterType<?>> typeIterator = typeList.listIterator();
 		for (Object variable : formatVariableValues) {
@@ -118,10 +105,34 @@ public class Parameter {
 			if (!typeIterator.next().isInstance(variable)) {
 				throw new IllegalArgumentException("type of " + variable + " is incorrect");
 			}
+		}
 
+		// convert to list of strings
+		List<String> stringValues = formatVariableValues.stream()
+				.map(String::valueOf).collect(Collectors.toList());
+		return formatParameterFromStrings(stringValues);
+	}
+
+	public String formatParameterFromStrings(List<String> formatVariableValues) {
+		if (formatVariableValues.size() != typeList.size()) {
+			throw new IllegalArgumentException("wrong number of values");
+		}
+
+		// if there's no format, just return as string
+		if (format == null) {
+			assert typeList.size() == 1;
+			return formatVariableValues.get(0);
+		}
+
+		// find pattern to replace in string
+		Matcher m = REPLACE_PATTERN.matcher(format);
+		StringBuffer sb = new StringBuffer();
+
+		for (String variable : formatVariableValues) {
 			// append replacement to string
 			if (m.find()) {
-				m.appendReplacement(sb, String.valueOf(variable));
+				variable = Matcher.quoteReplacement(variable);
+				m.appendReplacement(sb, variable);
 			} else {
 				throw new IllegalStateException();
 			}

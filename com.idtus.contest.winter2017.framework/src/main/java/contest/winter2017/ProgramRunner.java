@@ -105,7 +105,8 @@ public class ProgramRunner {
 			executor.shutdownNow();
 		}
 		catch (IOException | ExecutionException | InterruptedException e) {
-			System.out.println("ERROR: IOException has prevented execution of the command: " + command);
+			System.out.println("ERROR: Failed to execute test: " + command);
+			e.printStackTrace();
 			return null;
 		}
 
