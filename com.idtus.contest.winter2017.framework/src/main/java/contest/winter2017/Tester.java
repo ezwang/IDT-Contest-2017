@@ -51,6 +51,12 @@ public class Tester {
 
 		/** enable verbose output */
 		public boolean verbose;
+		
+		/** how many security tests to run */
+		public int securityTestIterations;
+		
+		/** when to stop security testing */
+		public int securityTestTime;
 	}
 
 	/**

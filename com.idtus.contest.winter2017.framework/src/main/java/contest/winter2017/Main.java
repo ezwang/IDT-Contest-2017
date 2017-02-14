@@ -110,7 +110,7 @@ public class Main {
 			Option.builder(TEST_TIME).hasArg(true)
 				.desc("maximum time limit for exploratory black box tests to run (default: 300 seconds)").build(),
 			Option.builder(TEST_THREADS).hasArg(true)
-				.desc("number of threads to use for tests (default: 2 threads)").build(),
+				.desc("number of threads to use for tests (default: 4 threads)").build(),
 
 			// boolean options
 			Option.builder(NO_CONVERT_TO_JSON)
@@ -238,13 +238,13 @@ public class Main {
 		}
 
 		// get numThreads
-		options.numThreads = 2;
+		options.numThreads = 4;
 		if (cliArgs.hasOption(TEST_THREADS)) {
 			try {
 				options.numThreads = Integer.parseInt(cliArgs.getOptionValue(TEST_THREADS));
 			}
 			catch (NumberFormatException ex) {
-				System.err.println("Error: Unable to parse numThreads");
+				System.err.println("Error: Unable to parse " + TEST_THREADS);
 				throw ex;
 			}
 		}
@@ -252,6 +252,29 @@ public class Main {
 		options.yamlOnly = cliArgs.hasOption(ONLY_YAML);
 		options.verbose = cliArgs.hasOption(ENABLE_VERBOSE);
 		options.disableJsonConversion = cliArgs.hasOption(NO_CONVERT_TO_JSON);
+		
+		options.securityTestIterations = 1000;
+		options.securityTestTime = 300;
+		
+		if (cliArgs.hasOption(TEST_TIME)) {
+			try {
+				options.securityTestTime = Integer.parseInt(cliArgs.getOptionValue(TEST_TIME));
+			}
+			catch (NumberFormatException ex) {
+				System.err.println("Error: Unable to parse " + TEST_TIME);
+				throw ex;
+			}
+		}
+		
+		if (cliArgs.hasOption(TEST_ITERATIONS)) {
+			try {
+				options.securityTestIterations = Integer.parseInt(cliArgs.getOptionValue(TEST_ITERATIONS));
+			}
+			catch (NumberFormatException ex) {
+				System.err.println("Error: Unable to parse " + TEST_ITERATIONS);
+				throw ex;
+			}
+		}
 
 		return options;
 	}

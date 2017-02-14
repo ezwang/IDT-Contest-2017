@@ -29,20 +29,20 @@ public class SecurityTester {
 	public void runTests(ParameterFactory parameterFactory) throws InterruptedException, ExecutionException {
 		List<List<String>> tests = new ArrayList<>();
 
-		// create cases from RandomParameterTest
-		final RandomParameterTest randomParameterTest = new RandomParameterTest(random);
-		for (int i = 0; i < 20; i++) {
-			tests.add(randomParameterTest.getNextInput(parameterFactory));
-		}
-
 		// create cases from ArgumentAmountTest
 		final ArgumentAmountTest argumentAmountTest = new ArgumentAmountTest(random);
 		for (int i = 0; i < 2; i++) {
 			tests.add(argumentAmountTest.getNextInput(parameterFactory));
 		}
+		
+		// create cases from RandomParameterTest
+		final RandomParameterTest randomParameterTest = new RandomParameterTest(random);
+		for (int i = 0; i < programRunner.securityTestIterations - 2; i++) {
+			tests.add(randomParameterTest.getNextInput(parameterFactory));
+		}
 
 		// run tests
-		outputs = programRunner.runTests(tests);
+		outputs = programRunner.runTests(tests, programRunner.securityTestTime);
 		for (Output output : outputs) {
 			String stdErrString = output.getStdErrString();
 			if (stdErrString != null && isStdErrExceptional(stdErrString)) {

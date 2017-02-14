@@ -21,6 +21,9 @@ public class ProgramRunner {
 	private final String jacocoOutputFilePath;
 	private final int numThreads;
 	private final boolean printDebug;
+	
+	public final int securityTestTime;
+	public final int securityTestIterations;
 
 	public ProgramRunner(TesterOptions options) {
 		this.jarToTestPath = options.jarToTestPath;
@@ -28,13 +31,23 @@ public class ProgramRunner {
 		this.jacocoOutputFilePath = options.jacocoOutputFilePath;
 		this.numThreads = options.numThreads;
 		this.printDebug = options.verbose && !options.yamlOnly;
+		
+		this.securityTestTime = options.securityTestTime;
+		this.securityTestIterations = options.securityTestIterations;
+	}
+	
+	public List<Output> runTests(List<List<String>> testParametersList)
+			throws InterruptedException, ExecutionException {
+		return runTests(testParametersList, -1);
 	}
 
-	public List<Output> runTests(List<List<String>> testParametersList)
+	public List<Output> runTests(List<List<String>> testParametersList, int timeout)
 			throws InterruptedException, ExecutionException {
 
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
+		// TODO: implement timeout
+		
 		// iterate through the lists of tests and execute each one
 		List<TestCallable> callables = new ArrayList<>();
 		for (List<String> parameters : testParametersList) {
