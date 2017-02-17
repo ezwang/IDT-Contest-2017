@@ -4,8 +4,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,6 +24,7 @@ public class ProgramRunner {
 	private final String jacocoAgentJarPath;
 	private final String jacocoOutputFilePath;
 	private final int numThreads;
+	private final boolean yamlOnly;
 	private final boolean printDebug;
 	
 	public final int securityTestTime;
@@ -30,6 +35,7 @@ public class ProgramRunner {
 		this.jacocoAgentJarPath = options.jacocoAgentJarPath;
 		this.jacocoOutputFilePath = options.jacocoOutputFilePath;
 		this.numThreads = options.numThreads;
+		this.yamlOnly = options.yamlOnly;
 		this.printDebug = options.verbose && !options.yamlOnly;
 		
 		this.securityTestTime = options.securityTestTime;
@@ -45,23 +51,51 @@ public class ProgramRunner {
 			throws InterruptedException, ExecutionException {
 
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-
-		// TODO: implement timeout
+		
+		Timer t = new Timer();
+		
+		List<TestCallable> callables = new LinkedList<TestCallable>();
+		List<Future<Output>> futures = new LinkedList<Future<Output>>();
+		
+		if (timeout > 0) {
+			t.schedule(new TimerTask() {
+				@Override
+				public void run() {
+					if (!executor.isShutdown()) {
+						if (!yamlOnly) {
+							System.out.println("Time limit exceeded, terminating remaining tasks...");
+						}
+						executor.shutdownNow();
+						for (Future<Output> future : futures) {
+							if (!future.isDone()) {
+								future.cancel(true);
+							}
+						}
+					}
+				}
+			}, timeout*1000);
+		}
 		
 		// iterate through the lists of tests and execute each one
-		List<TestCallable> callables = new ArrayList<>();
 		for (List<String> parameters : testParametersList) {
 			callables.add(new TestCallable(parameters));
 		}
 
 		// execute tests
-		List<Future<Output>> futures = executor.invokeAll(callables);
+		for (TestCallable callable : callables) {
+			futures.add(executor.submit(callable));
+		}
 
 		// collect results in list
 		List<Output> results = new ArrayList<Output>();
 		for (Future<Output> future : futures) {
-			results.add(future.get());
+			try {
+				results.add(future.get());
+			}
+			catch (CancellationException e) { }
 		}
+		
+		t.cancel();
 
 		executor.shutdownNow();
 		return results;
@@ -118,8 +152,11 @@ public class ProgramRunner {
 			executor.shutdownNow();
 		}
 		catch (IOException | ExecutionException | InterruptedException e) {
-			System.out.println("ERROR: Failed to execute test: " + command);
-			e.printStackTrace();
+			if (!yamlOnly) {
+				System.out.println("ERROR: Failed to execute test: " + command);
+				e.printStackTrace();
+			}
+			executor.shutdownNow();
 			return null;
 		}
 
