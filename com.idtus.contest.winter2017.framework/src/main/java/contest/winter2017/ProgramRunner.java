@@ -122,11 +122,15 @@ public class ProgramRunner {
 			stdOutString = IOUtils.toString(isOut, Charset.defaultCharset());
 			stdErrString = IOUtils.toString(isErr, Charset.defaultCharset());
 		}
-		catch (IOException | InterruptedException e) {
+		catch (IOException e) {
 			if (!yamlOnly) {
 				System.out.println("ERROR: Failed to execute test: " + command);
 				e.printStackTrace();
 			}
+			return null;
+		}
+		catch (InterruptedException e) {
+			// this occurs when the task is terminated due to a timeout
 			return null;
 		}
 
