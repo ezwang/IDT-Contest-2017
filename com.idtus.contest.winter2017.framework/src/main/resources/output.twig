@@ -61,8 +61,14 @@
         #classes .class table thead {
             font-weight: bold;
         }
+        .darkred {
+            color: #F44336;
+        }
+        .darkgreen {
+            color: #1B5E20;
+        }
         .red {
-            background-color: #E57373;
+            background-color: #B71C1C;
         }
         .yellow {
             background-color: #FFF176;
@@ -90,8 +96,8 @@
     <body>
         <h1>Test Results for {{ jarName }}</h1>
         <i class="fa fa-clock-o"></i> {{ timestamp }}<br />
-        <i class="fa fa-pie-chart"></i> <b>{{ number_format(summary, 2) }}%</b> Overall Coverage<br />
-        <i class="fa fa-file-text-o"></i> <b>{{ basic.passCount }}</b> out of <b>{{ basic.passCount + basic.failCount }}</b> basic tests passed ({{ number_format(basic.passCount * 100 / (basic.passCount + basic.failCount), 2) }}%)<br />
+        <span class="dark{% if summary > 0.9 %}green{% else %}red{% endif %}"><i class="fa fa-pie-chart"></i> <b>{{ number_format(summary, 2) }}%</b> Overall Coverage</span><br />
+        <span class="dark{% if basic.failCount == 0 %}green{% else %}red{% endif %}"><i class="fa fa-file-text-o"></i> <b>{{ basic.passCount }}</b> out of <b>{{ basic.passCount + basic.failCount }}</b> basic tests passed ({{ number_format(basic.passCount * 100 / (basic.passCount + basic.failCount), 2) }}%)</span><br />
         <i class="fa fa-file-text"></i> <b>{{ security.passCount }}</b> out of <b>{{ security.passCount + security.failCount }}</b> security tests passed ({{ number_format(security.passCount * 100 / (security.passCount + security.failCount), 2) }}%)</i>
         {% if length(security.errorMessages) > 0 %}
             <h2>Error Messages</h2>
