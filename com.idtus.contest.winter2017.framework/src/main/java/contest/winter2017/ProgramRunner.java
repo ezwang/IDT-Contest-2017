@@ -134,48 +134,29 @@ public class ProgramRunner {
 		String stdOutString;
 		String stdErrString;
 
-		// read stdout and stderr in separate threads to avoid blocking
-		ExecutorService executor = Executors.newFixedThreadPool(2);
+		// stdout and stderr should be read in separate threads, but whatever
 		try {
 			Process process = pb.start();
 			InputStream isOut = process.getInputStream();
 			InputStream isErr = process.getErrorStream();
 
-			// add tasks to executor
-			Future<String> futureOut = executor.submit(new InputStringCollector(isOut));
-			Future<String> futureErr = executor.submit(new InputStringCollector(isErr));
-
 			// await completion
 			process.waitFor();
-			stdOutString = futureOut.get();
-			stdErrString = futureErr.get();
-			executor.shutdownNow();
+
+			stdOutString = IOUtils.toString(isOut, Charset.defaultCharset());
+			stdErrString = IOUtils.toString(isErr, Charset.defaultCharset());
 		}
-		catch (IOException | ExecutionException | InterruptedException e) {
+		catch (IOException | InterruptedException e) {
 			if (!yamlOnly) {
 				System.out.println("ERROR: Failed to execute test: " + command);
 				e.printStackTrace();
 			}
-			executor.shutdownNow();
 			return null;
 		}
 
 		// we now have the output as an object from the run of the black-box jar
 		// this output object contains both the standard output and the standard error
 		return new Output(stdOutString, stdErrString);
-	}
-
-	private static class InputStringCollector implements Callable<String> {
-		InputStream in;
-
-		public InputStringCollector(InputStream inputStream) {
-			in = inputStream;
-		}
-
-		@Override
-		public String call() throws IOException {
-			return IOUtils.toString(in, Charset.defaultCharset());
-		}
 	}
 
 	private class TestCallable implements Callable<Output> {
