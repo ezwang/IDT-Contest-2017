@@ -73,7 +73,8 @@ The solution is able to generate black-box tests from unbounded string arguments
 The solution records unique exceptions and prints them out in the YAML report, as well as in the HTML output if the `-html` argument is given.
 
 19. **The solution shall print to stdout a YAML report at the end of testing that is in the following format:**
-```Total predefined tests run: <count here>
+```
+Total predefined tests run: <count here>
 Number of predefined tests that passed: <count here>
 Number of predefined tests that failed: <count here>
 Total code coverage percentage: <percentage as a double here>
