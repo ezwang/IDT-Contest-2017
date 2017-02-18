@@ -32,6 +32,10 @@
         #classes .class .name {
             font-weight: bold;
         }
+        #classes .class .pkg {
+            color: #888;
+            font-size: 0.95em;
+        }
         #classes .class table tbody td {
             min-width: 50px;
             text-align: right;
@@ -102,7 +106,8 @@
         <div id="classes">
             {% for class,data in coverage %}
             <div class="class">
-                <span class="name">{{ class }}</span>
+                <div class="name">{{ split(class,'/')[1] }}</div>
+                <div class="pkg">{{ split(class,'/')[0] }}</div>
                 <table>
                     <thead>
                         <tr><td>Category</td><td>Covered</td><td>Total</td><td>Percent</td></tr>
