@@ -55,13 +55,15 @@ public class SecurityTester {
 		// run tests
 		outputs = programRunner.runTests(tests, programRunner.securityTestTime);
 		for (Output output : outputs) {
-			String stdErrString = output.getStdErrString();
-			if (stdErrString != null && isStdErrExceptional(stdErrString)) {
-				errorMessages.add(stdErrString.trim());
-				failCount++;
-			}
-			else {
-				passCount++;
+			if (output != null) {
+				String stdErrString = output.getStdErrString();
+				if (stdErrString != null && isStdErrExceptional(stdErrString)) {
+					errorMessages.add(stdErrString.trim());
+					failCount++;
+				}
+				else {
+					passCount++;
+				}
 			}
 		}
 	}

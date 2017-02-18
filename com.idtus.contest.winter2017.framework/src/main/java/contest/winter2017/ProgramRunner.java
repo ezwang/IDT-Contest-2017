@@ -151,11 +151,16 @@ public class ProgramRunner {
 			stdErrString = futureErr.get();
 			executor.shutdownNow();
 		}
-		catch (IOException | ExecutionException | InterruptedException e) {
+		catch (IOException | ExecutionException e) {
 			if (!yamlOnly) {
 				System.out.println("ERROR: Failed to execute test: " + command);
 				e.printStackTrace();
 			}
+			executor.shutdownNow();
+			return null;
+		}
+		catch (InterruptedException e) {
+			// this occurs when the task is terminated due to a timeout
 			executor.shutdownNow();
 			return null;
 		}
