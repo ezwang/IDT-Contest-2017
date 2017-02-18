@@ -52,13 +52,19 @@ usage: com.idtus.contest.winter2017.framework [-bbTests <arg>] [-h]
  -verbose                    enable output of additional information
 ```
 
-The solution executes two types of tests: basic tests, and black-box tests.
+The solution executes two types of tests: basic tests, and black-box tests. Tests are executed in a multithreaded fashion, using workers from a fixed-size thread pool. The default number of threads is 4, but this can be adjusted using the `-threads` parameter.
 
-### TestBounds
+To specify only YAML output, the `-toolChain` parameter can be specified. This may enable the solution to be integrated into other software that handles building code, such as a continuous integration system.
 
-In order to properly execute, the solution must load information from a TestBounds class. This class is loaded from either a JSON file with the same name as the JAR under test, and in the same directory. If the JSON file cannot be found, an attempt is made to automatically extract it from a class inside the JAR under test whose class name is equal to the main class name with `TestBounds` appended, in that order of preference. Unless the `-noJson` option is specified, the extracted JSON file is then saved where it will be loaded next time, so that it can be easily modified.
+### JaCoCo code coverage
 
-Following is a brief explanation of the format of the TestBounds class, with pseudo-type names for readability. (These type names are not the same as the actual types used in our code.)
+The JaCoCo is used by the solution to measure code coverage. Instrumenting the execution of code requires the JaCoCo agent JAR. This can be specified with the `-jacocoAgentJarPath`; alternatively, a temporary copy of the jar is bundled with the solution by default and extracted. JaCoCo also requires a directory to store its output files; if this is not specified, a temporary directory is used. All temporary files are deleted upon exit.
+
+### TestBounds map
+
+In order to properly execute, the solution must load information from a TestBounds map. This map is loaded from either a JSON file with the same name as the JAR under test, and in the same directory. If the JSON file cannot be found, an attempt is made to automatically extract it from a class inside the JAR under test whose class name is equal to the main class name with `TestBounds` appended, in that order of preference. Unless the `-noJson` option is specified, the extracted JSON file is then saved where it will be loaded next time, so that it can be easily modified.
+
+Following is a brief explanation of the format of the TestBounds class, with pseudo-type names for readability. Note that these types do not correspond to those used by the solution, which parses the TestBounds map into its own classes.
 
 **TestBoundsMap**
 ```
@@ -92,16 +98,16 @@ Following is a brief explanation of the format of the TestBounds class, with pse
 
 ### Basic tests
 
-The basic tests for the solution are loaded from the `"tests"` key in the TestBounds class. They consist of hardcoded pairs of inputs, which are executed by the solution. The solution then compares the standard output and standard error emitted by the software under test with regexes provided by the TestMap. The solution always executes the basic tests first, and records the resulting code coverage.
+The basic tests for the solution are loaded from the `"tests"` key in the TestBounds map. They consist of hardcoded pairs of inputs, which are executed by the solution. The solution then compares the standard output and standard error emitted by the software under test with regexes provided by the TestMap. The solution always executes the basic tests first, and records the resulting code coverage.
 
 ### Advanced tests
 
-The black-box tests for the solution are generated using various methods, the primary one being randomized tests from the `"fixed parameter list"` or `"dependent parameter list"` keys in the TestBounds class. Tests are also generated, though in smaller number, by modifying the basic tests, or by creating test inputs from scratch.
+The black-box tests for the solution are generated using various methods, the primary one being randomized tests from the `"fixed parameter list"` or `"dependent parameter list"` keys in the TestBounds map. Tests are also generated, though in smaller number, by modifying the basic tests, or by creating test inputs from scratch.
 
 Since the goal of these tests is to generate exceptions that may not have otherwise been caught, any exceptions that occur during the advanced testing phase are stored and logged for later inspection. If verbose output is requested, the solution also prints the output of the software under test to standard output.
 
-The solution accepts a test time goal and a number of black-box testing iterations. If the number of black-box iterations is met before the time goal is reached, then additional black-box tests are generated until the time goal is reached. Specifying a negative value for the time goal will prevent this behavior, stopping the program once the number of black-box iterations has been met.
+The solution accepts a test time goal with `-timeGoal` and a number of black-box testing iterations with `-bbTests`. If the number of black-box iterations is met before the time goal is reached, then additional black-box tests are generated until the time goal is reached. Specifying a negative value for the time goal will prevent this behavior, stopping the program once the number of black-box iterations has been met.
 
-### HTML Output
+### HTML output
 
-If the `-html` flag is given, the solution will generate detailed HTML output. This file will be generated in the same folder as the jar file, unless the `-htmlPath <path to html output file>` argument is given, which saves the HTML output to the path specified.
+If the `-html` flag is given, the solution will generate detailed HTML output. This file will be generated in the same folder as the JAR file, unless the `-htmlPath <path to html output file>` argument is given, which saves the HTML output to the path specified.
