@@ -13,6 +13,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.jtwig.JtwigModel;
 import org.jtwig.JtwigTemplate;
+import org.jtwig.environment.EnvironmentConfiguration;
+import org.jtwig.environment.EnvironmentConfigurationBuilder;
 
 import com.google.gson.JsonParseException;
 
@@ -213,7 +215,8 @@ public class Tester {
 
 
 	public void generateHtmlOutput(String path) {
-		JtwigTemplate template = JtwigTemplate.classpathTemplate("/output.twig");
+		EnvironmentConfiguration env = EnvironmentConfigurationBuilder.configuration().functions().add(new JtwigClassFunction()).and().build();
+		JtwigTemplate template = JtwigTemplate.classpathTemplate("/output.twig", env);
 		JtwigModel model = JtwigModel.newModel();
 		model.with("jarName", jarName);
 		model.with("coverage", coverage.generateDetailedCodeCoverageResults());

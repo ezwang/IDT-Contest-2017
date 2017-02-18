@@ -112,8 +112,8 @@
         <div id="classes">
             {% for class,data in coverage %}
             <div class="class">
-                <div class="name">{{ split(class,'/')[1] }}</div>
-                <div class="pkg">{{ split(class,'/')[0] }}</div>
+                <div class="name">{{ class(class)[0] }}</div>
+                <div class="pkg">{{ class(class)[1] }}</div>
                 <table>
                     <thead>
                         <tr><td>Category</td><td>Covered</td><td>Total</td><td>Percent</td></tr>
