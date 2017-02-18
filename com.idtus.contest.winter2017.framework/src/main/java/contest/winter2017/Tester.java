@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
@@ -219,6 +221,8 @@ public class Tester {
 		
 		model.with("basic", basicTester);
 		model.with("security", securityTester);
+		
+		model.with("timestamp", new SimpleDateFormat("MM/dd/yyyy HH:mm:ss").format(new Date()));
 		
 		File htmlFile = new File(path);
 		try {
