@@ -1,6 +1,9 @@
 # IDT Contest Submission
 Contest Submission for TJHSST 01
 
+## Contest Requirements
+For a list of software requirements and information about how our team met these requirements, click [here](Requirements.md).
+
 ## Running the Solution
 You can run the solution by using the following command in the same folder as the JAR file:
 ```bash
