@@ -50,7 +50,7 @@ public class SecurityTester {
 		argumentAmountTest.generateTests(tests, -1);
 		corruptedInputTest.generateTests(tests, (iterations - tests.size()) / 3);
 		randomParameterTest.generateTests(tests, iterations - tests.size());
-		assert tests.size() == iterations;
+		assert tests.size() >= iterations;
 
 		// run tests
 		outputs = programRunner.runTests(tests, programRunner.securityTestTime);

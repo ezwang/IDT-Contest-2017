@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -51,40 +50,18 @@ public class ProgramRunner {
 			throws InterruptedException, ExecutionException {
 
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-		
 		Timer t = new Timer();
-		
-		List<TestCallable> callables = new LinkedList<TestCallable>();
-		List<Future<Output>> futures = new LinkedList<Future<Output>>();
-		
+
+		List<Future<Output>> futures = new ArrayList<>();
 		if (timeout > 0) {
-			t.schedule(new TimerTask() {
-				@Override
-				public void run() {
-					if (!executor.isShutdown()) {
-						if (!yamlOnly) {
-							System.out.println("Time limit exceeded, terminating remaining tasks...");
-						}
-						executor.shutdownNow();
-						for (Future<Output> future : futures) {
-							if (!future.isDone()) {
-								future.cancel(true);
-							}
-						}
-					}
-				}
-			}, timeout*1000);
-		}
-		
-		// iterate through the lists of tests and execute each one
-		for (List<String> parameters : testParametersList) {
-			callables.add(new TestCallable(parameters));
+			t.schedule(new CancelFuturesTask(executor, futures), timeout * 1000);
 		}
 
 		// execute tests
-		for (TestCallable callable : callables) {
-			futures.add(executor.submit(callable));
-		}
+		testParametersList.stream()
+				.map(parameters -> new TestCallable(parameters))
+				.map(callable -> executor.submit(callable))
+				.forEachOrdered(futures::add);
 
 		// collect results in list
 		List<Output> results = new ArrayList<Output>();
@@ -94,9 +71,8 @@ public class ProgramRunner {
 			}
 			catch (CancellationException e) { }
 		}
-		
-		t.cancel();
 
+		t.cancel();
 		executor.shutdownNow();
 		return results;
 	}
@@ -169,6 +145,31 @@ public class ProgramRunner {
 		@Override
 		public Output call() {
 			return instrumentAndExecuteCode(parameters);
+		}
+	}
+
+	private class CancelFuturesTask extends TimerTask {
+		private ExecutorService executor;
+		private List<Future<Output>> futures;
+
+		public CancelFuturesTask(ExecutorService executor, List<Future<Output>> futures) {
+			this.executor = executor;
+			this.futures = futures;
+		}
+
+		@Override
+		public void run() {
+			if (!executor.isShutdown()) {
+				if (!yamlOnly) {
+					System.out.println("Time limit exceeded, terminating remaining tasks...");
+				}
+				executor.shutdownNow();
+				for (Future<Output> future : futures) {
+					if (!future.isDone()) {
+						future.cancel(true);
+					}
+				}
+			}
 		}
 	}
 }
