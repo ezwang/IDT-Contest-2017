@@ -90,6 +90,12 @@ public class Main {
 	 * number of threads to use for basic tests
 	 */
 	public static final String TEST_THREADS = "threads";
+	
+	/**
+	 * output details to HTML file
+	 */
+	public static final String HTML_OUTPUT = "html";
+	public static final String HTML_OUTPUT_PATH = "htmlPath";
 
 
 	/**
@@ -97,7 +103,7 @@ public class Main {
 	 */
 	private static final Option[] CLI_OPTION_LIST = new Option[] {
 			// paths
-			Option.builder(JAR_TO_TEST_PATH).hasArg(true).required(true)
+			Option.builder(JAR_TO_TEST_PATH).hasArg(true)
 				.desc("path to the executable jar to test").build(),
 			Option.builder(JACOCO_OUTPUT_PATH).hasArg(true)
 				.desc("path to directory for jacoco output").build(),
@@ -120,7 +126,11 @@ public class Main {
 			Option.builder(ENABLE_VERBOSE)
 				.desc("enable output of additional information").build(),
 			Option.builder(ALT_HELP).longOpt(HELP)
-				.desc("display this help message").build()
+				.desc("display this help message").build(),
+			Option.builder(HTML_OUTPUT)
+				.desc("generate detailed html output to file").build(),
+			Option.builder(HTML_OUTPUT_PATH).hasArg(true)
+				.desc("html output file path").build()
 	};
 
 
@@ -164,6 +174,9 @@ public class Main {
 			// execute tests
 			tester.executeBasicTests();
 			tester.executeSecurityTests();
+			if (testerOptions.htmlFilePath != null) {
+				tester.generateHtmlOutput(testerOptions.htmlFilePath);
+			}
 			tester.printYaml();
 		}
 
@@ -197,7 +210,7 @@ public class Main {
 
 		// get testFilePath
 		File jarToTestFile = new File(options.jarToTestPath);
-		File testFile = new File(jarToTestFile.getParent(), jarToTestFile.getName().replaceFirst("[.][^.]+$", "") + ".json");
+		File testFile = new File(jarToTestFile.getParent(), FilenameUtils.removeExtension(jarToTestFile.getName()) + ".json");
 		options.jsonFilePath = testFile.getAbsolutePath();
 
 		// get jacocoOutputDirPath
@@ -274,6 +287,16 @@ public class Main {
 				System.err.println("Error: Unable to parse " + TEST_ITERATIONS);
 				throw ex;
 			}
+		}
+		
+		if (cliArgs.hasOption(HTML_OUTPUT) || cliArgs.hasOption(HTML_OUTPUT_PATH)) {
+			options.htmlFilePath = cliArgs.getOptionValue(HTML_OUTPUT_PATH);
+			if (options.htmlFilePath == null) {
+				options.htmlFilePath = new File(jarToTestFile.getParent(), FilenameUtils.removeExtension(jarToTestFile.getName()) + ".html").getAbsolutePath();
+			}
+		}
+		else {
+			options.htmlFilePath = null;
 		}
 
 		return options;
