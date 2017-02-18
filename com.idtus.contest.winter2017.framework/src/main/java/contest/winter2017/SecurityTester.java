@@ -41,30 +41,41 @@ public class SecurityTester {
 		List<List<String>> tests = new ArrayList<>();
 		int iterations = programRunner.securityTestIterations;
 
-		final ArgumentAmountTest argumentAmountTest = new ArgumentAmountTest(random);
-		final CorruptedInputTest corruptedInputTest = new CorruptedInputTest(basicTests, random);
-		final RandomParameterTest randomParameterTest = new RandomParameterTest(parameterFactory, random);
-
-		// create test cases
-		argumentAmountTest.generateTests(tests, -1);
-		corruptedInputTest.generateTests(tests, (iterations - tests.size()) / 3);
-		randomParameterTest.generateTests(tests, iterations - tests.size());
-		assert tests.size() >= iterations;
-
-		// run tests
-		outputs = programRunner.runTests(tests, programRunner.securityTestTime);
-		for (Output output : outputs) {
-			if (output != null) {
-				String stdErrString = output.getStdErrString();
-				if (stdErrString != null && isStdErrExceptional(stdErrString)) {
-					errorMessages.add(stdErrString.trim());
-					failCount++;
-				}
-				else {
-					passCount++;
+		boolean noTime = programRunner.securityTestTime < 0;
+		
+		int remainingTime = programRunner.securityTestTime;
+		
+		do {
+			final ArgumentAmountTest argumentAmountTest = new ArgumentAmountTest(random);
+			final CorruptedInputTest corruptedInputTest = new CorruptedInputTest(basicTests, random);
+			final RandomParameterTest randomParameterTest = new RandomParameterTest(parameterFactory, random);
+	
+			// create test cases
+			argumentAmountTest.generateTests(tests, -1);
+			corruptedInputTest.generateTests(tests, (iterations - tests.size()) / 3);
+			randomParameterTest.generateTests(tests, iterations - tests.size());
+			assert tests.size() >= iterations;
+	
+			// run tests
+			
+			long startTime = System.currentTimeMillis();
+			outputs = programRunner.runTests(tests, remainingTime);
+			long endTime = System.currentTimeMillis();
+			remainingTime -= (endTime - startTime)/1000;
+			for (Output output : outputs) {
+				if (output != null) {
+					String stdErrString = output.getStdErrString();
+					if (stdErrString != null && isStdErrExceptional(stdErrString)) {
+						errorMessages.add(stdErrString.trim());
+						failCount++;
+					}
+					else {
+						passCount++;
+					}
 				}
 			}
 		}
+		while (!noTime && remainingTime > 0);
 	}
 
 	private static boolean isStdErrExceptional(String stdErrString) {
