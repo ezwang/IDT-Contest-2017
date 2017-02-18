@@ -18,8 +18,13 @@ public class SecurityTester {
 	private final ProgramRunner programRunner;
 	private final Random random;
 
-	private Set<String> errorMessages = new HashSet<>();
+	private Set<String> errorMessages;
 	private List<Output> outputs = null;
+	
+	@SuppressWarnings("unused")
+	private int passCount;
+	@SuppressWarnings("unused")
+	private int failCount;
 
 	public SecurityTester(ProgramRunner programRunner) {
 		this.programRunner = programRunner;
@@ -27,6 +32,11 @@ public class SecurityTester {
 	}
 
 	public void runTests(ParameterFactory parameterFactory) throws InterruptedException, ExecutionException {
+		passCount = 0;
+		failCount = 0;
+		
+		errorMessages = new HashSet<>();
+		
 		List<List<String>> tests = new ArrayList<>();
 
 		// create cases from ArgumentAmountTest
@@ -47,6 +57,10 @@ public class SecurityTester {
 			String stdErrString = output.getStdErrString();
 			if (stdErrString != null && isStdErrExceptional(stdErrString)) {
 				errorMessages.add(stdErrString.trim());
+				failCount++;
+			}
+			else {
+				passCount++;
 			}
 		}
 	}

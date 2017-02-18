@@ -4,6 +4,7 @@
         <title>{{ jarName }} - Code Coverage Summary</title>
 
         <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+        <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
         <style type="text/css">
         body {
             font-family: "Open Sans", sans-serif;
@@ -12,16 +13,19 @@
         h1 {
             font-size: 1.5em;
         }
-        #classes .class {
+        h2 {
+            font-size: 1.25em;
+        }
+        #classes .class, .error {
             padding: 10px;
-            margin-bottom: 10px;
+            margin-top: 10px;
             background-color: white;
         }
         #classes .class .name {
             font-weight: bold;
         }
         #classes .class table tbody td {
-            min-width: 25px;
+            min-width: 50px;
             text-align: right;
         }
         #classes .class table tbody td.type {
@@ -44,13 +48,25 @@
     </head>
     <body>
         <h1>Test Results for {{ jarName }}</h1>
+        <i class="fa fa-pie-chart"></i> <b>{{ number_format(summary, 2) }}%</b> Overall Coverage<br />
+        <i class="fa fa-file-text-o"></i> <b>{{ basic.passCount }}</b> out of <b>{{ basic.passCount + basic.failCount }}</b> basic tests passed ({{ number_format(basic.passCount * 100 / (basic.passCount + basic.failCount), 2) }}%)<br />
+        <i class="fa fa-file-text"></i> <b>{{ security.passCount }}</b> out of <b>{{ security.passCount + security.failCount }}</b> security tests passed ({{ number_format(security.passCount * 100 / (security.passCount + security.failCount), 2) }}%)</i>
+        {% if length(security.errorMessages) > 0 %}
+            <h2>Error Messages</h2>
+            {% for error in security.errorMessages %}
+            <div class="error">
+                <pre>{{ error }}</pre>
+            </div>
+            {% endfor %}
+        {% endif %}
+        <h2>Code Coverage</h2>
         <div id="classes">
             {% for class,data in coverage %}
             <div class="class">
                 <span class="name">{{ class }}</span>
                 <table>
                     <thead>
-                        <tr><td>Category</td><td>Covered</td><td>Total</td></tr>
+                        <tr><td>Category</td><td>Covered</td><td>Total</td><td>Percent</td></tr>
                     </thead>
                     <tbody>
                         {% for type,info in data %}
@@ -58,6 +74,7 @@
                             <td class="type">{{ title(type) }}</td>
                             <td>{{ info.covered }}</td>
                             <td>{{ info.total }}</td>
+                            <td>{% if info.total == 0 %}N/A{% else %}{{ number_format(info.covered*100/info.total, 2) }}{% endif %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

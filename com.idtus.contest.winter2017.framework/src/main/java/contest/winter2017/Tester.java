@@ -1,5 +1,6 @@
 package contest.winter2017;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -214,8 +215,14 @@ public class Tester {
 		JtwigModel model = JtwigModel.newModel();
 		model.with("jarName", jarName);
 		model.with("coverage", coverage.generateDetailedCodeCoverageResults());
+		model.with("summary", coverage.generateSummaryCodeCoverageResults());
+		
+		model.with("basic", basicTester);
+		model.with("security", securityTester);
+		
+		File htmlFile = new File(path);
 		try {
-			FileOutputStream out = new FileOutputStream(new File(path));
+			FileOutputStream out = new FileOutputStream(htmlFile);
 			template.render(model, out);
 			out.close();
 			
