@@ -43,21 +43,26 @@ public class CorruptedInputTest implements SecurityTest {
 			return startParams;
 		}
 
-		int numToCorrupt = random.nextInt(param.length() / 2);
-		for (int i = 0; i < numToCorrupt; i++) {
-			int stringPos = random.nextInt(param.length());
-
-			// update, delete, or insert a character at random
-			switch (random.nextInt(3)) {
-			case 0:
-				param.setCharAt(stringPos, Util.generateRandomChar(random));
-				break;
-			case 1:
-				param.deleteCharAt(stringPos);
-				break;
-			case 2:
-				param.insert(stringPos, Util.generateRandomChar(random));
-				break;
+		int nextVal = param.length() / 2;
+		
+		if (nextVal > 0) {
+			int numToCorrupt = Math.abs(random.nextInt(nextVal));
+	
+			for (int i = 0; i < numToCorrupt; i++) {
+				int stringPos = random.nextInt(param.length());
+	
+				// update, delete, or insert a character at random
+				switch (random.nextInt(3)) {
+				case 0:
+					param.setCharAt(stringPos, Util.generateRandomChar(random));
+					break;
+				case 1:
+					param.deleteCharAt(stringPos);
+					break;
+				case 2:
+					param.insert(stringPos, Util.generateRandomChar(random));
+					break;
+				}
 			}
 		}
 
