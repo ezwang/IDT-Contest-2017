@@ -178,7 +178,7 @@ public class Tester {
 		securityTester = new SecurityTester(programRunner);
 
 		try {
-			securityTester.runTests(parameterFactory);
+			securityTester.runTests(parameterFactory, this.tests);
 		}
 		catch (Exception e) {
 			if (!optionYamlOnly) {

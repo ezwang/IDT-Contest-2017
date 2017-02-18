@@ -14,10 +14,12 @@ import contest.winter2017.ParameterType;
  * SingleValueSelector to select necessary values for each ParameterType.
  */
 public class RandomParameterTest implements SecurityTest {
+	private ParameterFactory parameterFactory;
 	private Random random;
 	private SingleValueSelector[] selectors;
 
-	public RandomParameterTest(Random random) {
+	public RandomParameterTest(ParameterFactory parameterFactory, Random random) {
+		this.parameterFactory = parameterFactory;
 		this.random = random;
 		this.selectors = new SingleValueSelector[] {
 				new DefaultSelector(random),
@@ -27,7 +29,13 @@ public class RandomParameterTest implements SecurityTest {
 	}
 
 	@Override
-	public List<String> getNextInput(ParameterFactory parameterFactory) {
+	public void generateTests(List<List<String>> list, int maxCount) {
+		for (int i = 0; i < maxCount; i++) {
+			list.add(getNextInput());
+		}
+	}
+
+	public List<String> getNextInput() {
 		List<String> previousParameterStrings = new ArrayList<String>();
 		List<Parameter> potentialParameters = parameterFactory.getNext(previousParameterStrings);
 

@@ -1,5 +1,6 @@
 package contest.winter2017;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import securitytests.ArgumentAmountTest;
+import securitytests.CorruptedInputTest;
 import securitytests.RandomParameterTest;
 
 /**
@@ -28,28 +30,27 @@ public class SecurityTester {
 
 	public SecurityTester(ProgramRunner programRunner) {
 		this.programRunner = programRunner;
-		this.random = new Random(12345L);
+		this.random = new SecureRandom();
 	}
 
-	public void runTests(ParameterFactory parameterFactory) throws InterruptedException, ExecutionException {
+	public void runTests(ParameterFactory parameterFactory, List<Test> basicTests)
+			throws InterruptedException, ExecutionException {
 		passCount = 0;
 		failCount = 0;
-		
 		errorMessages = new HashSet<>();
-		
-		List<List<String>> tests = new ArrayList<>();
 
-		// create cases from ArgumentAmountTest
+		List<List<String>> tests = new ArrayList<>();
+		int iterations = programRunner.securityTestIterations;
+
 		final ArgumentAmountTest argumentAmountTest = new ArgumentAmountTest(random);
-		for (int i = 0; i < 2; i++) {
-			tests.add(argumentAmountTest.getNextInput(parameterFactory));
-		}
-		
-		// create cases from RandomParameterTest
-		final RandomParameterTest randomParameterTest = new RandomParameterTest(random);
-		for (int i = 0; i < programRunner.securityTestIterations - 2; i++) {
-			tests.add(randomParameterTest.getNextInput(parameterFactory));
-		}
+		final CorruptedInputTest corruptedInputTest = new CorruptedInputTest(basicTests, random);
+		final RandomParameterTest randomParameterTest = new RandomParameterTest(parameterFactory, random);
+
+		// create test cases
+		argumentAmountTest.generateTests(tests, -1);
+		corruptedInputTest.generateTests(tests, (iterations - tests.size()) / 3);
+		randomParameterTest.generateTests(tests, iterations - tests.size());
+		assert tests.size() == iterations;
 
 		// run tests
 		outputs = programRunner.runTests(tests, programRunner.securityTestTime);

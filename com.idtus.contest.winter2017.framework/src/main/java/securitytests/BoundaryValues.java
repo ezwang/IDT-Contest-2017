@@ -17,19 +17,14 @@ public class BoundaryValues {
 	};
 
 	public static Integer pickRandomInteger(Random random) {
-		return pickRandomValue(INTS, random);
+		return Util.pickRandomValue(INTS, random);
 	}
 	
 	public static Double pickRandomDouble(Random random) {
-		return pickRandomValue(DOUBLES, random);
+		return Util.pickRandomValue(DOUBLES, random);
 	}
 	
 	public static String pickRandomString(Random random) {
-		return pickRandomValue(STRINGS, random);
-	}
-
-	private static <T> T pickRandomValue(T[] list, Random random) {
-		int index = random.nextInt(list.length);
-		return list[index];
+		return Util.pickRandomValue(STRINGS, random);
 	}
 }

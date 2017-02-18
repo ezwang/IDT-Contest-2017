@@ -20,12 +20,7 @@ public class RandomSelector implements RandomParameterTest.SingleValueSelector {
 			return random.nextDouble();
 		}
 		else if (type instanceof ParameterType.StringType) {
-			char[] arr = new char[random.nextInt(32)];
-			for (int i = 0; i < arr.length; i++) {
-				// apparently, we can't use null characters
-				arr[i] = (char) (random.nextInt(255) + 1);
-			}
-			return String.valueOf(arr);
+			return Util.generateRandomString(32, random);
 		}
 		else {
 			throw new UnsupportedOperationException();

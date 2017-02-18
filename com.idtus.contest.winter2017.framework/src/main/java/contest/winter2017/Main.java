@@ -265,10 +265,10 @@ public class Main {
 		options.yamlOnly = cliArgs.hasOption(ONLY_YAML);
 		options.verbose = cliArgs.hasOption(ENABLE_VERBOSE);
 		options.disableJsonConversion = cliArgs.hasOption(NO_CONVERT_TO_JSON);
-		
+
 		options.securityTestIterations = 1000;
 		options.securityTestTime = 300;
-		
+
 		if (cliArgs.hasOption(TEST_TIME)) {
 			try {
 				options.securityTestTime = Integer.parseInt(cliArgs.getOptionValue(TEST_TIME));
