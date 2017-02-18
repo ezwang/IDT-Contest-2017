@@ -88,7 +88,9 @@ public class SecurityTester {
 		assert outputs != null;
 		if (verbose) {
 			for (Output output : outputs) {
-				Tester.printBasicTestOutput(output);
+				if (output != null) {
+					Tester.printBasicTestOutput(output);
+				}
 			}
 		}
 	}
