@@ -14,7 +14,6 @@ import securitytests.RandomParameterTest;
 
 /**
  * Exploratory security vulnerability testing is implemented here.
- * 
  */
 public class SecurityTester {
 	private final ProgramRunner programRunner;
@@ -22,7 +21,7 @@ public class SecurityTester {
 
 	private Set<String> errorMessages;
 	private List<Output> outputs = null;
-	
+
 	@SuppressWarnings("unused")
 	private int passCount;
 	@SuppressWarnings("unused")

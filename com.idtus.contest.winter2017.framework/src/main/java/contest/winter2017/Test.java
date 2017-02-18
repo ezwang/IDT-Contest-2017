@@ -9,18 +9,18 @@ import java.util.List;
  * @author IDT
  */
 public class Test {
-	
+
 	/**
 	 * List of parameter values that will be passed into the executable jar as 
 	 * as single test
 	 */
 	private List<String> parameters;
-	
+
 	/**
 	 * The regex string that describes the expected std out result for the test
 	 */
 	private String stdOutExpectedResultRegex;
-	
+
 	/**
 	 * The regex string that describes the expected std err result for the test
 	 */
@@ -47,7 +47,7 @@ public class Test {
 		return parameters;
 	}
 
-	
+
 	/**
 	 * Getter for Standard Out expected results regex
 	 * @return
@@ -56,7 +56,7 @@ public class Test {
 		return stdOutExpectedResultRegex;
 	}
 
-	
+
 	/**
 	 * Getter for Standard Error expected results regex
 	 * @return
@@ -64,5 +64,5 @@ public class Test {
 	public String getStdErrExpectedResultRegex() {
 		return stdErrExpectedResultRegex;
 	}
-	
+
 }

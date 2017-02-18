@@ -176,7 +176,7 @@ class JacocoCoverageAnalyzer {
 			coverage.put("complexity", getMetricResultMap(cc.getComplexityCounter()));
 
 			executionResults.put(cc.getName(), coverage);
-			
+
 			// adding this to a string is a little impractical with the size of some of the files,
 			// so we are commenting it out, but it shows that you can get the coverage status of each line
 			// if you wanted to add debug argument to display this level of detail at command line level....
@@ -184,7 +184,7 @@ class JacocoCoverageAnalyzer {
 			for (int i = cc.getFirstLine(); i <= cc.getLastLine(); i++) {
 				coverage.put("Line " + Integer.valueOf(i) + ": " + getStatusString(cc.getLine(i).getStatus()) + "\n");
 			}
-			*/
+			 */
 		}
 
 		return executionResults;
@@ -218,7 +218,7 @@ class JacocoCoverageAnalyzer {
 	 * @param counter
 	 * @return
 	 */
-	
+
 	private Map<String, Integer> getMetricResultMap(final ICounter counter) {
 		Map<String, Integer> res = new HashMap<String, Integer>();
 		res.put("missed", counter.getMissedCount());

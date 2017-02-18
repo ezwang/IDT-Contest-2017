@@ -1,4 +1,5 @@
 package contest.winter2017;
+
 import org.jtwig.functions.FunctionRequest;
 import org.jtwig.functions.SimpleJtwigFunction;
 
@@ -11,7 +12,7 @@ public class JtwigClassFunction extends SimpleJtwigFunction {
 		if (sep < 0) {
 			return new String[] { val, "" };
 		}
-		return new String[] { val.substring(sep + 1),val.substring(0, sep) };
+		return new String[] { val.substring(sep + 1), val.substring(0, sep) };
 	}
 
 	@Override

@@ -14,9 +14,9 @@ public class FixedParameterFactory extends ParameterFactory {
 	public boolean isBounded() {
 		return true;
 	}
-	
+
 	public List<Parameter> getParameterList() {
-			return fixedParameterList;
+		return fixedParameterList;
 	}
 
 	@Override

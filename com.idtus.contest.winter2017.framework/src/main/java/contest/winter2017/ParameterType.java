@@ -16,7 +16,7 @@ public class ParameterType<T> {
 			super(String.class);
 		}
 	}
-	
+
 	@Override
 	public boolean equals(Object obj) {
 		if (!(obj instanceof ParameterType)) {

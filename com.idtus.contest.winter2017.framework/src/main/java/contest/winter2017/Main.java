@@ -90,7 +90,7 @@ public class Main {
 	 * number of threads to use for basic tests
 	 */
 	public static final String TEST_THREADS = "threads";
-	
+
 	/**
 	 * output details to HTML file
 	 */
@@ -102,35 +102,35 @@ public class Main {
 	 * list of Option objects representing all command line arguments
 	 */
 	private static final Option[] CLI_OPTION_LIST = new Option[] {
-			// paths
-			Option.builder(JAR_TO_TEST_PATH).hasArg(true)
-				.desc("path to the executable jar to test").build(),
-			Option.builder(JACOCO_OUTPUT_PATH).hasArg(true)
-				.desc("path to directory for jacoco output").build(),
-			Option.builder(JACOCO_AGENT_JAR_PATH).hasArg(true)
-				.desc("path to the jacoco agent jar").build(),
+		// paths
+		Option.builder(JAR_TO_TEST_PATH).hasArg(true)
+			.desc("path to the executable jar to test").build(),
+		Option.builder(JACOCO_OUTPUT_PATH).hasArg(true)
+			.desc("path to directory for jacoco output").build(),
+		Option.builder(JACOCO_AGENT_JAR_PATH).hasArg(true)
+			.desc("path to the jacoco agent jar").build(),
 
-			// numbers
-			Option.builder(TEST_ITERATIONS).hasArg(true)
-				.desc("number of exploratory black box tests to run (default: 1000 iterations)").build(),
-			Option.builder(TEST_TIME).hasArg(true)
-				.desc("maximum time limit for exploratory black box tests to run (default: 300 seconds)").build(),
-			Option.builder(TEST_THREADS).hasArg(true)
-				.desc("number of threads to use for tests (default: 4 threads)").build(),
+		// numbers
+		Option.builder(TEST_ITERATIONS).hasArg(true)
+			.desc("number of exploratory black box tests to run (default: 1000 iterations)").build(),
+		Option.builder(TEST_TIME).hasArg(true)
+			.desc("maximum time limit for exploratory black box tests to run (default: 300 seconds)").build(),
+		Option.builder(TEST_THREADS).hasArg(true)
+			.desc("number of threads to use for tests (default: 4 threads)").build(),
+		Option.builder(HTML_OUTPUT_PATH).hasArg(true)
+			.desc("html output file path").build(),
 
-			// boolean options
-			Option.builder(NO_CONVERT_TO_JSON)
-				.desc("disable converting test cases to json").build(),
-			Option.builder(ONLY_YAML)
-				.desc("only output YAML summary").build(),
-			Option.builder(ENABLE_VERBOSE)
-				.desc("enable output of additional information").build(),
-			Option.builder(ALT_HELP).longOpt(HELP)
-				.desc("display this help message").build(),
-			Option.builder(HTML_OUTPUT)
-				.desc("generate detailed html output to file").build(),
-			Option.builder(HTML_OUTPUT_PATH).hasArg(true)
-				.desc("html output file path").build()
+		// boolean options
+		Option.builder(NO_CONVERT_TO_JSON)
+			.desc("disable converting test cases to json").build(),
+		Option.builder(ONLY_YAML)
+			.desc("only output YAML summary").build(),
+		Option.builder(ENABLE_VERBOSE)
+			.desc("enable output of additional information").build(),
+		Option.builder(ALT_HELP).longOpt(HELP)
+			.desc("display this help message").build(),
+		Option.builder(HTML_OUTPUT)
+			.desc("generate detailed html output to file").build()
 	};
 
 
@@ -219,7 +219,8 @@ public class Main {
 		} else {
 			options.jacocoOutputDirPath = createTempDir().getAbsolutePath();
 			// delete temporary jacoco output directory on exit
-			Runtime.getRuntime().addShutdownHook(new Thread(() -> FileUtils.deleteQuietly(new File(options.jacocoOutputDirPath))));
+			Runtime.getRuntime().addShutdownHook(new Thread(() ->
+				FileUtils.deleteQuietly(new File(options.jacocoOutputDirPath))));
 		}
 
 		// determine jacocoOutputFilePath
@@ -266,9 +267,7 @@ public class Main {
 		options.verbose = cliArgs.hasOption(ENABLE_VERBOSE);
 		options.disableJsonConversion = cliArgs.hasOption(NO_CONVERT_TO_JSON);
 
-		options.securityTestIterations = 1000;
 		options.securityTestTime = 300;
-
 		if (cliArgs.hasOption(TEST_TIME)) {
 			try {
 				options.securityTestTime = Integer.parseInt(cliArgs.getOptionValue(TEST_TIME));
@@ -278,7 +277,8 @@ public class Main {
 				throw ex;
 			}
 		}
-		
+
+		options.securityTestIterations = 1000;
 		if (cliArgs.hasOption(TEST_ITERATIONS)) {
 			try {
 				options.securityTestIterations = Integer.parseInt(cliArgs.getOptionValue(TEST_ITERATIONS));
@@ -288,15 +288,15 @@ public class Main {
 				throw ex;
 			}
 		}
-		
+
+		options.htmlFilePath = null;
 		if (cliArgs.hasOption(HTML_OUTPUT) || cliArgs.hasOption(HTML_OUTPUT_PATH)) {
 			options.htmlFilePath = cliArgs.getOptionValue(HTML_OUTPUT_PATH);
 			if (options.htmlFilePath == null) {
-				options.htmlFilePath = new File(jarToTestFile.getParent(), FilenameUtils.removeExtension(jarToTestFile.getName()) + ".html").getAbsolutePath();
+				File file = new File(jarToTestFile.getParent(),
+						FilenameUtils.removeExtension(jarToTestFile.getName()) + ".html");
+				options.htmlFilePath = file.getAbsolutePath();
 			}
-		}
-		else {
-			options.htmlFilePath = null;
 		}
 
 		return options;

@@ -44,13 +44,13 @@ public class CorruptedInputTest implements SecurityTest {
 		}
 
 		int nextVal = param.length() / 2;
-		
+
 		if (nextVal > 0) {
 			int numToCorrupt = Math.abs(random.nextInt(nextVal));
-	
+
 			for (int i = 0; i < numToCorrupt; i++) {
 				int stringPos = random.nextInt(param.length());
-	
+
 				// update, delete, or insert a character at random
 				switch (random.nextInt(3)) {
 				case 0:

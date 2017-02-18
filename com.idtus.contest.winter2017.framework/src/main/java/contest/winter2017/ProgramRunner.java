@@ -25,7 +25,7 @@ public class ProgramRunner {
 	private final int numThreads;
 	private final boolean yamlOnly;
 	private final boolean printDebug;
-	
+
 	public final int securityTestTime;
 	public final int securityTestIterations;
 
@@ -36,11 +36,11 @@ public class ProgramRunner {
 		this.numThreads = options.numThreads;
 		this.yamlOnly = options.yamlOnly;
 		this.printDebug = options.verbose && !options.yamlOnly;
-		
+
 		this.securityTestTime = options.securityTestTime;
 		this.securityTestIterations = options.securityTestIterations;
 	}
-	
+
 	public List<Output> runTests(List<List<String>> testParametersList)
 			throws InterruptedException, ExecutionException {
 		return runTests(testParametersList, -1);
@@ -59,9 +59,9 @@ public class ProgramRunner {
 
 		// execute tests
 		testParametersList.stream()
-				.map(parameters -> new TestCallable(parameters))
-				.map(callable -> executor.submit(callable))
-				.forEachOrdered(futures::add);
+			.map(parameters -> new TestCallable(parameters))
+			.map(callable -> executor.submit(callable))
+			.forEachOrdered(futures::add);
 
 		// collect results in list
 		List<Output> results = new ArrayList<Output>();

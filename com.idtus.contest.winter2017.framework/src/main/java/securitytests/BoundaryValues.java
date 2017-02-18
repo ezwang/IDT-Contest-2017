@@ -19,11 +19,11 @@ public class BoundaryValues {
 	public static Integer pickRandomInteger(Random random) {
 		return Util.pickRandomValue(INTS, random);
 	}
-	
+
 	public static Double pickRandomDouble(Random random) {
 		return Util.pickRandomValue(DOUBLES, random);
 	}
-	
+
 	public static String pickRandomString(Random random) {
 		return Util.pickRandomValue(STRINGS, random);
 	}

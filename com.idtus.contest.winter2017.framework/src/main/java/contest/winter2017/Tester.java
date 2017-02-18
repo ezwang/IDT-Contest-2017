@@ -1,15 +1,12 @@
 package contest.winter2017;
 
-import java.awt.Desktop;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.jtwig.JtwigModel;
 import org.jtwig.JtwigTemplate;
@@ -51,7 +48,7 @@ public class Tester {
 
 		/** path to the json file to load or save test bounds */
 		public String jsonFilePath;
-		
+
 		/** path to the detailed html output file */
 		public String htmlFilePath;
 
@@ -66,10 +63,10 @@ public class Tester {
 
 		/** enable verbose output */
 		public boolean verbose;
-		
+
 		/** how many security tests to run */
 		public int securityTestIterations;
-		
+
 		/** when to stop security testing */
 		public int securityTestTime;
 	}
@@ -88,7 +85,7 @@ public class Tester {
 	private JacocoCoverageAnalyzer coverage;
 	private BasicTester basicTester;
 	private SecurityTester securityTester;
-	
+
 	private String jarName;
 
 	private boolean optionYamlOnly;
@@ -129,7 +126,7 @@ public class Tester {
 
 		this.parameterFactory = testBoundsParser.getParameterFactory();
 		this.tests = testBoundsParser.getTests();
-		
+
 		this.jarName = FilenameUtils.getName(options.jarToTestPath);
 	}
 
@@ -221,18 +218,18 @@ public class Tester {
 		model.with("jarName", jarName);
 		model.with("coverage", coverage.generateDetailedCodeCoverageResults());
 		model.with("summary", coverage.generateSummaryCodeCoverageResults());
-		
+
 		model.with("basic", basicTester);
 		model.with("security", securityTester);
-		
+
 		model.with("timestamp", new SimpleDateFormat("MM/dd/yyyy HH:mm:ss").format(new Date()));
-		
+
 		File htmlFile = new File(path);
 		try {
 			FileOutputStream out = new FileOutputStream(htmlFile);
 			template.render(model, out);
 			out.close();
-			
+
 			if (!optionYamlOnly) {
 				System.out.println("Detailed HTML output was generated to " + path + ".");
 				System.out.println();
@@ -241,7 +238,7 @@ public class Tester {
 		catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		
+
 	}
 
 }
