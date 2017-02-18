@@ -1,7 +1,7 @@
 # IDT Contest Submission
 Contest Submission for TJHSST 01
 
-## Contest Requirements
+## Contest requirements
 For a list of software requirements and information about how our team met these requirements, click [here](Requirements.md).
 
 ## Software documentation
