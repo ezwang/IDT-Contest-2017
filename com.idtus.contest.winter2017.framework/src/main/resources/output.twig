@@ -96,7 +96,7 @@
     <body>
         <h1>Test Results for {{ jarName }}</h1>
         <i class="fa fa-clock-o"></i> {{ timestamp }}<br />
-        <span class="dark{% if summary > 0.9 %}green{% else %}red{% endif %}"><i class="fa fa-pie-chart"></i> <b>{{ number_format(summary, 2) }}%</b> Overall Coverage</span><br />
+        <span class="dark{% if summary > 90 %}green{% else %}red{% endif %}"><i class="fa fa-pie-chart"></i> <b>{{ number_format(summary, 2) }}%</b> Overall Coverage</span><br />
         <span class="dark{% if basic.failCount == 0 %}green{% else %}red{% endif %}"><i class="fa fa-file-text-o"></i> <b>{{ basic.passCount }}</b> out of <b>{{ basic.passCount + basic.failCount }}</b> basic tests passed ({{ number_format(basic.passCount * 100 / (basic.passCount + basic.failCount), 2) }}%)</span><br />
         <i class="fa fa-file-text"></i> <b>{{ security.passCount }}</b> out of <b>{{ security.passCount + security.failCount }}</b> security tests passed ({{ number_format(security.passCount * 100 / (security.passCount + security.failCount), 2) }}%)</i>
         {% if length(security.errorMessages) > 0 %}
