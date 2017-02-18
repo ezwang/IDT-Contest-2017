@@ -190,7 +190,6 @@ public class Tester {
 		// results that we are generating with jacoco
 		if (!optionYamlOnly) {
 			securityTester.printInfo(optionVerbose);
-			coverage.showCodeCoverageResultsExample();
 		}
 	}
 
@@ -214,6 +213,7 @@ public class Tester {
 		JtwigTemplate template = JtwigTemplate.classpathTemplate("/output.twig");
 		JtwigModel model = JtwigModel.newModel();
 		model.with("jarName", jarName);
+		model.with("coverage", coverage.generateDetailedCodeCoverageResults());
 		try {
 			FileOutputStream out = new FileOutputStream(new File(path));
 			template.render(model, out);

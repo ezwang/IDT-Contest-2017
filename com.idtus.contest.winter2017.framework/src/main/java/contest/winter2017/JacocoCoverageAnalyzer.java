@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.jacoco.core.analysis.Analyzer;
 import org.jacoco.core.analysis.CoverageBuilder;
@@ -145,9 +148,10 @@ class JacocoCoverageAnalyzer {
 	/**
 	 * This method shows an example of how to generate code coverage metrics from Jacoco
 	 * 
-	 * @return String representing code coverage results
+	 * @return Map<String, Map<String, String>> representing code coverage results
 	 */
-	public String generateDetailedCodeCoverageResults() {
+	@SuppressWarnings("rawtypes")
+	public Map<String, Map> generateDetailedCodeCoverageResults() {
 		try {
 			loadCoverage();
 		} catch (IOException e) {
@@ -155,7 +159,7 @@ class JacocoCoverageAnalyzer {
 			return null;
 		}
 
-		StringBuilder executionResults = new StringBuilder();
+		Map<String, Map> executionResults = new TreeMap<String, Map>();
 
 		for (final IClassCoverage cc : coverageBuilder.getClasses()) {
 			// ignore the TestBounds class within the jar
@@ -163,24 +167,27 @@ class JacocoCoverageAnalyzer {
 				continue;
 			}
 
-			executionResults.append("Coverage of class " + cc.getName() + ":\n");
-			executionResults.append(getMetricResultString("instructions", cc.getInstructionCounter()));
-			executionResults.append(getMetricResultString("branches", cc.getBranchCounter()));
-			executionResults.append(getMetricResultString("lines", cc.getLineCounter()));
-			executionResults.append(getMetricResultString("methods", cc.getMethodCounter()));
-			executionResults.append(getMetricResultString("complexity", cc.getComplexityCounter()));
+			Map<String, Map> coverage = new TreeMap<String, Map>();
 
+			coverage.put("instructions", getMetricResultMap(cc.getInstructionCounter()));
+			coverage.put("branches", getMetricResultMap(cc.getBranchCounter()));
+			coverage.put("lines", getMetricResultMap(cc.getLineCounter()));
+			coverage.put("methods", getMetricResultMap(cc.getMethodCounter()));
+			coverage.put("complexity", getMetricResultMap(cc.getComplexityCounter()));
+
+			executionResults.put(cc.getName(), coverage);
+			
 			// adding this to a string is a little impractical with the size of some of the files,
 			// so we are commenting it out, but it shows that you can get the coverage status of each line
 			// if you wanted to add debug argument to display this level of detail at command line level....
 			/*
 			for (int i = cc.getFirstLine(); i <= cc.getLastLine(); i++) {
-				executionResults.append("Line " + Integer.valueOf(i) + ": " + getStatusString(cc.getLine(i).getStatus()) + "\n");
+				coverage.put("Line " + Integer.valueOf(i) + ": " + getStatusString(cc.getLine(i).getStatus()) + "\n");
 			}
 			*/
 		}
 
-		return executionResults.toString();
+		return executionResults;
 	}
 
 
@@ -211,32 +218,12 @@ class JacocoCoverageAnalyzer {
 	 * @param counter
 	 * @return
 	 */
-	private String getMetricResultString(final String unit, final ICounter counter) {
-		return String.format("%d of %d missed%n",
-				counter.getMissedCount(), counter.getTotalCount());
-	}
-
-
-	/**
-	 * This method is not meant to be part of the final framework. It was included to demonstrate
-	 * three different ways to tap into the code coverage results/metrics using jacoco. 
-	 * 
-	 * This method is deprecated and will be removed from the final product after your team completes 
-	 * development. Please do not add additional dependencies to this method. 
-	 */
-	@Deprecated
-	public void showCodeCoverageResultsExample() {
-		// Below is the first example of how to tap into code coverage metrics
-		double result = generateSummaryCodeCoverageResults();
-		System.out.println("\n");
-		System.out.println("percent covered: " + result);
-
-		// Below is the second example of how to tap into code coverage metrics
-		System.out.println("\n");
-		printRawCoverageStats();
-
-		// Below is the third example of how to tap into code coverage metrics
-		System.out.println("\n");
-		System.out.println(generateDetailedCodeCoverageResults());
+	
+	private Map<String, Integer> getMetricResultMap(final ICounter counter) {
+		Map<String, Integer> res = new HashMap<String, Integer>();
+		res.put("missed", counter.getMissedCount());
+		res.put("covered", counter.getCoveredCount());
+		res.put("total", counter.getTotalCount());
+		return res;
 	}
 }

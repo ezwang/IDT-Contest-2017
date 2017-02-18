@@ -2,8 +2,68 @@
 <html>
     <head>
         <title>{{ jarName }} - Code Coverage Summary</title>
+
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+        <style type="text/css">
+        body {
+            font-family: "Open Sans", sans-serif;
+            background-color: #f2f2f4;
+        }
+        h1 {
+            font-size: 1.5em;
+        }
+        #classes .class {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: white;
+        }
+        #classes .class .name {
+            font-weight: bold;
+        }
+        #classes .class table tbody td {
+            min-width: 25px;
+            text-align: right;
+        }
+        #classes .class table tbody td.type {
+            min-width: 100px;
+            text-align: left;
+        }
+        #classes .class table thead {
+            font-weight: bold;
+        }
+        .red {
+            background-color: #E57373;
+        }
+        .yellow {
+            background-color: #FFF176;
+        }
+        .green {
+            background-color: #81C784;
+        }
+        </style>
     </head>
     <body>
-        <h1></h1>
+        <h1>Test Results for {{ jarName }}</h1>
+        <div id="classes">
+            {% for class,data in coverage %}
+            <div class="class">
+                <span class="name">{{ class }}</span>
+                <table>
+                    <thead>
+                        <tr><td>Category</td><td>Covered</td><td>Total</td></tr>
+                    </thead>
+                    <tbody>
+                        {% for type,info in data %}
+                        <tr class="{% if info.covered == info.total %}green{% elseif info.covered == 0 %}red{% else %}yellow{% endif %}">
+                            <td class="type">{{ title(type) }}</td>
+                            <td>{{ info.covered }}</td>
+                            <td>{{ info.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
     </body>
 </html>
